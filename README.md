@@ -40,6 +40,16 @@ Generate a review file for uncertain classifications:
   --min-confidence 0.35
 ```
 
+Generate one low-confidence CSV per category:
+
+```bash
+.venv/bin/python index_books.py \
+  --source "/Users/longtran/Documents/E-Books" \
+  --output-dir "./output" \
+  --min-confidence 0.35 \
+  --split-low-confidence-by-category
+```
+
 ## Output schema
 
 CSV columns:
@@ -60,6 +70,9 @@ Low-confidence review CSV (`output/low_confidence_review.csv`) columns:
 - `filename`
 - `absolute_path`
 - `matched_keywords`
+
+When `--split-low-confidence-by-category` is enabled, per-category CSV files are
+written under `output/low_confidence_by_category/`.
 
 ## Tuning categories
 
