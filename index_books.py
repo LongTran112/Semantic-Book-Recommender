@@ -454,6 +454,56 @@ def write_low_confidence_csv(
     return len(flagged)
 
 
+def write_low_confidence_category_splits(
+    records: Sequence[BookRecord],
+    min_confidence: float,
+    output_dir: Path,
+) -> int:
+    flagged = [record for record in records if record.confidence < min_confidence]
+    by_category: Dict[str, List[BookRecord]] = defaultdict(list)
+    for record in flagged:
+        by_category[record.category].append(record)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    created_files = 0
+    for category in CATEGORY_ORDER:
+        items = sorted(
+            by_category.get(category, []),
+            key=lambda rec: (rec.confidence, rec.title.lower()),
+        )
+        if not items:
+            continue
+        safe_category = category.lower().replace("-", "_")
+        split_path = output_dir / f"{safe_category}.csv"
+        with split_path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(
+                [
+                    "confidence_threshold",
+                    "category",
+                    "confidence",
+                    "title",
+                    "filename",
+                    "absolute_path",
+                    "matched_keywords",
+                ]
+            )
+            for record in items:
+                writer.writerow(
+                    [
+                        f"{min_confidence:.3f}",
+                        record.category,
+                        f"{record.confidence:.3f}",
+                        record.title,
+                        record.filename,
+                        record.absolute_path,
+                        "; ".join(record.matched_keywords),
+                    ]
+                )
+        created_files += 1
+    return created_files
+
+
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Categorize technical PDF books.")
     parser.add_argument(
@@ -492,6 +542,17 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         default=None,
         help="Optional custom path for low-confidence review CSV.",
     )
+    parser.add_argument(
+        "--split-low-confidence-by-category",
+        action="store_true",
+        help="Also write one low-confidence CSV per category.",
+    )
+    parser.add_argument(
+        "--low-confidence-category-dir",
+        type=Path,
+        default=None,
+        help="Optional output directory for per-category low-confidence CSV files.",
+    )
     return parser.parse_args(argv)
 
 
@@ -503,6 +564,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     extract_timeout: int = max(2, args.extract_timeout)
     min_confidence: Optional[float] = args.min_confidence
     low_confidence_report: Optional[Path] = args.low_confidence_report
+    split_low_confidence_by_category: bool = args.split_low_confidence_by_category
+    low_confidence_category_dir: Optional[Path] = args.low_confidence_category_dir
 
     if not source_dir.exists() or not source_dir.is_dir():
         print(f"Source directory not found: {source_dir}", file=sys.stderr)
@@ -534,6 +597,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             f"Wrote low-confidence review CSV: {report_path.resolve()} "
             f"({flagged_count} records below {threshold:.3f})"
         )
+        if split_low_confidence_by_category:
+            category_dir = low_confidence_category_dir or (output_dir / "low_confidence_by_category")
+            split_count = write_low_confidence_category_splits(records, threshold, category_dir)
+            print(
+                f"Wrote {split_count} category-split low-confidence CSV files: "
+                f"{category_dir.resolve()}"
+            )
 
     print(f"Scanned {len(pdf_files)} PDFs from: {source_dir}")
     print(f"Wrote CSV: {csv_path.resolve()}")
