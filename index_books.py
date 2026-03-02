@@ -27,6 +27,7 @@ except ImportError:  # pragma: no cover - runtime dependency guard
 
 CATEGORY_ORDER: List[str] = [
     "DeepLearning",
+    "ComputerVision",
     "MachineLearning",
     "AI-LLM",
     "Embedded-Systems",
@@ -58,6 +59,16 @@ KEYWORDS: Dict[str, List[str]] = {
         "gan",
         "backpropagation",
         "representation learning",
+    ],
+    "ComputerVision": [
+        "computer vision",
+        "image processing",
+        "opencv",
+        "object detection",
+        "image segmentation",
+        "cnn",
+        "vision transformer",
+        "yolo",
     ],
     "MachineLearning": [
         "machine learning",
