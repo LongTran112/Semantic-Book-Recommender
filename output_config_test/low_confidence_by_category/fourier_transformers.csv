@@ -1,0 +1,2 @@
+confidence_threshold,category,confidence,title,filename,absolute_path,matched_keywords
+0.350,Fourier-Transformers,0.288,04_lab_hardware_acceleration,04_lab_hardware_acceleration.pdf,/Users/longtran/Downloads/04_lab_hardware_acceleration.pdf,body:signal processing

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import json
 import logging
 import multiprocessing as mp
 import re
@@ -17,12 +19,19 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 try:
     from pypdf import PdfReader
 except ImportError:  # pragma: no cover - runtime dependency guard
     PdfReader = None
+
+try:
+    import yaml
+except ImportError:  # pragma: no cover - optional dependency at runtime
+    yaml = None
+
+from semantic_books.learning_mode import infer_learning_mode
 
 
 CATEGORY_ORDER: List[str] = [
@@ -228,15 +237,83 @@ KEYWORDS: Dict[str, List[str]] = {
     ],
 }
 
-KEYWORD_PATTERNS: Dict[str, List[Tuple[str, re.Pattern[str]]]] = {}
-for _category, _words in KEYWORDS.items():
-    compiled: List[Tuple[str, re.Pattern[str]]] = []
-    for _word in _words:
-        escaped = re.escape(_word)
-        escaped = escaped.replace(r"\ ", r"\s+")
-        pattern = re.compile(rf"\b{escaped}\b")
-        compiled.append((_word, pattern))
-    KEYWORD_PATTERNS[_category] = compiled
+DEFAULT_CATEGORY_ORDER: List[str] = CATEGORY_ORDER.copy()
+DEFAULT_SOURCE_WEIGHTS: Dict[str, float] = dict(SOURCE_WEIGHTS)
+DEFAULT_KEYWORDS: Dict[str, List[str]] = {key: values[:] for key, values in KEYWORDS.items()}
+
+
+def compile_keyword_patterns(
+    keywords: Dict[str, List[str]],
+) -> Dict[str, List[Tuple[str, re.Pattern[str]]]]:
+    patterns: Dict[str, List[Tuple[str, re.Pattern[str]]]] = {}
+    for category, words in keywords.items():
+        compiled: List[Tuple[str, re.Pattern[str]]] = []
+        for word in words:
+            escaped = re.escape(word)
+            escaped = escaped.replace(r"\ ", r"\s+")
+            pattern = re.compile(rf"\b{escaped}\b")
+            compiled.append((word, pattern))
+        patterns[category] = compiled
+    return patterns
+
+
+KEYWORD_PATTERNS: Dict[str, List[Tuple[str, re.Pattern[str]]]] = compile_keyword_patterns(KEYWORDS)
+
+
+def load_runtime_config(config_path: Optional[Path]) -> Tuple[List[str], Dict[str, float], Dict[str, List[str]]]:
+    """Load category/keyword config from YAML file, falling back to defaults."""
+    category_order = DEFAULT_CATEGORY_ORDER.copy()
+    source_weights = dict(DEFAULT_SOURCE_WEIGHTS)
+    keywords = {key: values[:] for key, values in DEFAULT_KEYWORDS.items()}
+
+    if config_path is None:
+        return category_order, source_weights, keywords
+    if not config_path.exists():
+        return category_order, source_weights, keywords
+    if yaml is None:
+        raise RuntimeError(
+            "YAML config found but dependency missing. Install with: "
+            "python3 -m pip install pyyaml"
+        )
+
+    with config_path.open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle) or {}
+
+    loaded_order = data.get("category_order")
+    if isinstance(loaded_order, list) and all(isinstance(item, str) for item in loaded_order):
+        category_order = loaded_order
+
+    loaded_weights = data.get("source_weights")
+    if isinstance(loaded_weights, dict):
+        filtered_weights: Dict[str, float] = {}
+        for key in ("title", "metadata", "filename", "body"):
+            value = loaded_weights.get(key)
+            if isinstance(value, (int, float)):
+                filtered_weights[key] = float(value)
+        if len(filtered_weights) == 4:
+            source_weights = filtered_weights
+
+    loaded_keywords = data.get("categories")
+    if isinstance(loaded_keywords, dict):
+        parsed_keywords: Dict[str, List[str]] = {}
+        for category, words in loaded_keywords.items():
+            if not isinstance(category, str) or not isinstance(words, list):
+                continue
+            clean_words = [word for word in words if isinstance(word, str) and word.strip()]
+            if clean_words:
+                parsed_keywords[category] = clean_words
+        if parsed_keywords:
+            keywords = parsed_keywords
+
+    # Keep order and keyword map consistent.
+    for category in list(keywords.keys()):
+        if category not in category_order:
+            category_order.append(category)
+    category_order = [category for category in category_order if category in keywords or category == "Other"]
+    if "Other" not in category_order:
+        category_order.append("Other")
+
+    return category_order, source_weights, keywords
 
 
 @dataclass
@@ -247,6 +324,10 @@ class BookRecord:
     filename: str
     absolute_path: str
     matched_keywords: List[str]
+    book_id: str = ""
+    metadata_text: str = ""
+    body_preview: str = ""
+    learning_mode: str = "unknown"
 
 
 def normalize(text: str) -> str:
@@ -255,6 +336,26 @@ def normalize(text: str) -> str:
     text = re.sub(r"[^a-z0-9\s]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
+
+
+def build_book_id(path: Path) -> str:
+    digest = hashlib.sha1(str(path.resolve()).encode("utf-8")).hexdigest()
+    return digest[:12]
+
+
+def sanitize_text(text: str) -> str:
+    """Replace invalid unicode code points (e.g. lone surrogates)."""
+    return text.encode("utf-8", errors="replace").decode("utf-8")
+
+
+def sanitize_json_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return sanitize_text(value)
+    if isinstance(value, list):
+        return [sanitize_json_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: sanitize_json_value(item) for key, item in value.items()}
+    return value
 
 
 # Many real-world PDFs are malformed; keep parser noise from flooding stdout.
@@ -406,6 +507,8 @@ def categorize_pdf(pdf_path: Path, max_pages: int, extract_timeout: int) -> Book
         matched = matched + [error_hint]
 
     title = raw_title.strip() or pdf_path.stem
+    mode_source = " ".join([title, raw_metadata or "", raw_body[:6000] if raw_body else "", filename])
+    learning_mode = infer_learning_mode(mode_source)
     return BookRecord(
         category=category,
         confidence=confidence,
@@ -413,11 +516,24 @@ def categorize_pdf(pdf_path: Path, max_pages: int, extract_timeout: int) -> Book
         filename=filename,
         absolute_path=str(pdf_path.resolve()),
         matched_keywords=matched,
+        book_id=build_book_id(pdf_path),
+        metadata_text=raw_metadata.strip(),
+        body_preview=(raw_body or "")[:12000],
+        learning_mode=learning_mode,
     )
 
 
 def gather_pdfs(source_dir: Path) -> List[Path]:
     return sorted(path for path in source_dir.rglob("*.pdf") if path.is_file())
+
+
+def build_records(pdf_files: Sequence[Path], max_pages: int, extract_timeout: int) -> List[BookRecord]:
+    records: List[BookRecord] = []
+    for idx, path in enumerate(pdf_files, start=1):
+        records.append(categorize_pdf(path, max_pages=max_pages, extract_timeout=extract_timeout))
+        if idx % 25 == 0 or idx == len(pdf_files):
+            print(f"Processed {idx}/{len(pdf_files)} PDFs...")
+    return sorted(records, key=lambda rec: (rec.category, -rec.confidence, rec.title.lower()))
 
 
 def write_csv(records: Sequence[BookRecord], csv_path: Path) -> None:
@@ -482,6 +598,26 @@ def write_markdown(records: Sequence[BookRecord], markdown_path: Path) -> None:
         lines.append("")
 
     markdown_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def write_semantic_source_jsonl(records: Sequence[BookRecord], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as handle:
+        for record in records:
+            payload = {
+                "book_id": record.book_id,
+                "category": record.category,
+                "confidence": float(record.confidence),
+                "title": record.title,
+                "filename": record.filename,
+                "absolute_path": record.absolute_path,
+                "matched_keywords": record.matched_keywords,
+                "learning_mode": record.learning_mode,
+                "metadata_text": record.metadata_text,
+                "body_preview": record.body_preview,
+            }
+            safe_payload = sanitize_json_value(payload)
+            handle.write(json.dumps(safe_payload, ensure_ascii=False) + "\n")
 
 
 def write_low_confidence_csv(
@@ -574,6 +710,12 @@ def write_low_confidence_category_splits(
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Categorize technical PDF books.")
     parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("./categories.yaml"),
+        help="Path to YAML config for categories/keywords/weights.",
+    )
+    parser.add_argument(
         "--source",
         required=True,
         type=Path,
@@ -620,11 +762,20 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         default=None,
         help="Optional output directory for per-category low-confidence CSV files.",
     )
+    parser.add_argument(
+        "--semantic-source-jsonl",
+        type=Path,
+        default=None,
+        help="Optional output path for semantic source JSONL records.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    global CATEGORY_ORDER, SOURCE_WEIGHTS, KEYWORDS, KEYWORD_PATTERNS
+
     args = parse_args(argv)
+    config_path: Optional[Path] = args.config
     source_dir: Path = args.source
     output_dir: Path = args.output_dir
     max_pages: int = max(1, args.max_pages)
@@ -633,6 +784,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     low_confidence_report: Optional[Path] = args.low_confidence_report
     split_low_confidence_by_category: bool = args.split_low_confidence_by_category
     low_confidence_category_dir: Optional[Path] = args.low_confidence_category_dir
+    semantic_source_jsonl: Optional[Path] = args.semantic_source_jsonl
+
+    try:
+        CATEGORY_ORDER, SOURCE_WEIGHTS, KEYWORDS = load_runtime_config(config_path)
+    except Exception as exc:
+        print(f"Failed to load config: {exc}", file=sys.stderr)
+        return 1
+    KEYWORD_PATTERNS = compile_keyword_patterns(KEYWORDS)
 
     if not source_dir.exists() or not source_dir.is_dir():
         print(f"Source directory not found: {source_dir}", file=sys.stderr)
@@ -643,18 +802,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"No PDF files found under: {source_dir}")
         return 0
 
-    records: List[BookRecord] = []
-    for idx, path in enumerate(pdf_files, start=1):
-        records.append(categorize_pdf(path, max_pages=max_pages, extract_timeout=extract_timeout))
-        if idx % 25 == 0 or idx == len(pdf_files):
-            print(f"Processed {idx}/{len(pdf_files)} PDFs...")
-    records = sorted(records, key=lambda rec: (rec.category, -rec.confidence, rec.title.lower()))
+    records = build_records(pdf_files, max_pages=max_pages, extract_timeout=extract_timeout)
 
     csv_path = output_dir / "books_by_category.csv"
     md_path = output_dir / "books_by_category.md"
+    semantic_source_path = semantic_source_jsonl or (output_dir / "semantic_source.jsonl")
 
     write_csv(records, csv_path)
     write_markdown(records, md_path)
+    write_semantic_source_jsonl(records, semantic_source_path)
 
     if min_confidence is not None:
         threshold = min(max(min_confidence, 0.0), 1.0)
@@ -675,6 +831,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f"Scanned {len(pdf_files)} PDFs from: {source_dir}")
     print(f"Wrote CSV: {csv_path.resolve()}")
     print(f"Wrote MD : {md_path.resolve()}")
+    print(f"Wrote semantic source JSONL: {semantic_source_path.resolve()}")
     return 0
 
 
