@@ -1,1 +1,6 @@
 pypdf
+pyyaml
+numpy
+sentence-transformers
+streamlit
+pypdfium2

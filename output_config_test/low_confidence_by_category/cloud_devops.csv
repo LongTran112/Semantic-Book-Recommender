@@ -1,0 +1,21 @@
+confidence_threshold,category,confidence,title,filename,absolute_path,matched_keywords
+0.350,Cloud-DevOps,0.238,Bescheinigung über angemeldete Prüfungen / Overview of Enrolled Examinations,Angemeldete Prüfungen.pdf,/Users/longtran/Downloads/Angemeldete Prüfungen.pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,2025-12-15_Klausuren_Fachgespraeche_WiSe2025.xlsx,2025-12_Klausuren_Fachgespraeche_WiSe2025.pdf,/Users/longtran/Downloads/2025-12_Klausuren_Fachgespraeche_WiSe2025.pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Belegungen und Prüfungsanmeldungen,Belegungen und Prüfungsanmeldungen (1).pdf,/Users/longtran/Downloads/Belegungen und Prüfungsanmeldungen (1).pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Belegungen und Prüfungsanmeldungen,Belegungen und Prüfungsanmeldungen (2).pdf,/Users/longtran/Downloads/Belegungen und Prüfungsanmeldungen (2).pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Belegungen und Prüfungsanmeldungen,Belegungen und Prüfungsanmeldungen (3).pdf,/Users/longtran/Downloads/Belegungen und Prüfungsanmeldungen (3).pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Belegungen und Prüfungsanmeldungen,Belegungen und Prüfungsanmeldungen.pdf,/Users/longtran/Downloads/Belegungen und Prüfungsanmeldungen.pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Content-CheatsheetKubernetes,Content-CheatsheetKubernetes.pdf,/Users/longtran/Downloads/Content-CheatsheetKubernetes.pdf,body:kubernetes
+0.350,Cloud-DevOps,0.288,Next Generation Data Center Networking,1-CharacteristicsServiceModels.pdf,/Users/longtran/Downloads/1-CharacteristicsServiceModels.pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Next Generation Data Center Networking,2-ReferenceArchitectures.pdf,/Users/longtran/Downloads/2-ReferenceArchitectures.pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Next Generation Data Center Networking,3-MigrationIntegration.pdf,/Users/longtran/Downloads/3-MigrationIntegration.pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Next Generation Data Center Networking,4-LimitationsOutlook.pdf,/Users/longtran/Downloads/4-LimitationsOutlook.pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Untitled 2,Github_and_Dockerhub_links (1).pdf,/Users/longtran/Downloads/Github_and_Dockerhub_links (1).pdf,body:docker
+0.350,Cloud-DevOps,0.288,Untitled 2,Github_and_Dockerhub_links (2).pdf,/Users/longtran/Downloads/Github_and_Dockerhub_links (2).pdf,body:docker
+0.350,Cloud-DevOps,0.288,Untitled 2,Github_and_Dockerhub_links (3).pdf,/Users/longtran/Downloads/Github_and_Dockerhub_links (3).pdf,body:docker
+0.350,Cloud-DevOps,0.288,Untitled 2,Github_and_Dockerhub_links (4).pdf,/Users/longtran/Downloads/Github_and_Dockerhub_links (4).pdf,body:docker
+0.350,Cloud-DevOps,0.288,Untitled 2,Github_and_Dockerhub_links.pdf,/Users/longtran/Downloads/Github_and_Dockerhub_links.pdf,body:docker
+0.350,Cloud-DevOps,0.288,Übersicht über alle Leistungen / Overview of all Examinations,Notenspiegel (1) (1).pdf,/Users/longtran/Downloads/Notenspiegel (1) (1).pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Übersicht über alle Leistungen / Overview of all Examinations,Notenspiegel (1).pdf,/Users/longtran/Downloads/Notenspiegel (1).pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Übersicht über alle Leistungen / Overview of all Examinations,Notenspiegel.pdf,/Users/longtran/Downloads/Notenspiegel.pdf,body:cloud computing
+0.350,Cloud-DevOps,0.288,Übersicht über bestandene Leistungen / Overview of Passed Examinations,Notenspiegel (2).pdf,/Users/longtran/Downloads/Notenspiegel (2).pdf,body:cloud computing
