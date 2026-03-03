@@ -5,6 +5,17 @@ category_order:
   - Fourier-Transformers
   - MachineLearning
   - AI-LLM
+  - Electronics
+  - Circuit-Design-Analysis
+  - Electrical-Engineering
+  - Math-ElectricalEngineering
+  - Signal-Processing
+  - Control-Systems
+  - Power-Systems
+  - Communication-Systems
+  - Electromagnetics-RF
+  - Semiconductor
+  - STM32
   - Embedded-Systems
   - Linux-SystemProgramming
   - ComputerArchitecture
@@ -78,6 +89,118 @@ categories:
     - rag
     - agentic
     - language model
+  Electronics:
+    - electronics
+    - electronic circuits
+    - analog electronics
+    - digital electronics
+    - op amp
+    - transistor
+    - electronic devices
+  Circuit-Design-Analysis:
+    - circuit design
+    - circuit analysis
+    - network analysis
+    - nodal analysis
+    - mesh analysis
+    - thevenin
+    - norton
+    - spice
+    - ltspice
+    - pspice
+  Electrical-Engineering:
+    - electrical engineering
+    - electric machines
+    - power systems
+    - control systems
+    - electromagnetics
+    - power electronics
+    - signal processing
+    - instrumentation
+  Math-ElectricalEngineering:
+    - complex analysis
+    - differential equations
+    - laplace transform
+    - fourier series
+    - fourier transform
+    - linear systems
+    - probability for engineers
+    - engineering mathematics
+  Signal-Processing:
+    - signal processing
+    - digital signal processing
+    - dsp
+    - discrete time signal
+    - z transform
+    - filter design
+    - fir filter
+    - iir filter
+    - spectral estimation
+    - adaptive filter
+  Control-Systems:
+    - control systems
+    - automatic control
+    - feedback control
+    - state space
+    - pid control
+    - stability analysis
+    - root locus
+    - bode plot
+    - nyquist
+    - controllability
+  Power-Systems:
+    - power systems
+    - power engineering
+    - power generation
+    - transmission line
+    - smart grid
+    - power electronics
+    - electric power
+    - switchgear
+    - high voltage
+  Communication-Systems:
+    - communication systems
+    - digital communications
+    - wireless communications
+    - information theory
+    - modulation
+    - coding theory
+    - ofdm
+    - mimo
+    - channel estimation
+    - antenna
+  Electromagnetics-RF:
+    - electromagnetics
+    - electromagnetic fields
+    - microwave engineering
+    - rf engineering
+    - antenna theory
+    - wave propagation
+    - transmission lines
+    - maxwell equations
+    - smith chart
+  Semiconductor:
+    - semiconductor
+    - semiconductor physics
+    - semiconductor devices
+    - mosfet
+    - cmos
+    - bjt
+    - vlsi
+    - ic fabrication
+    - integrated circuit
+    - microelectronics
+  STM32:
+    - stm32
+    - stm32f4
+    - stm32f1
+    - stmicroelectronics
+    - stm32cube
+    - stm32cubeide
+    - hal driver
+    - cmsis
+    - nucleo
+    - discovery board
   Embedded-Systems:
     - embedded
     - microcontroller
