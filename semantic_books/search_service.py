@@ -8,7 +8,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:  # pragma: no cover - optional dependency in test/runtime environments
+    class SentenceTransformer:  # type: ignore[override]
+        def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+            raise ModuleNotFoundError(
+                "sentence_transformers is required for semantic search. "
+                "Install dependencies from requirements.txt."
+            )
 
 
 @dataclass

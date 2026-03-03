@@ -1,10 +1,20 @@
 category_order:
   - DeepLearning
   - ComputerVision
+  - CNN
+  - GAN
+  - Computer-Graphics
   - NLP
   - Fourier-Transformers
   - MachineLearning
   - AI-LLM
+  - Generative-AI
+  - Transformer-DeepLearning
+  - Transfer-Learning
+  - Genetic-Algorithms
+  - CUDA
+  - Parallel-Computing
+  - Concurrency
   - Electronics
   - Circuit-Design-Analysis
   - Electrical-Engineering
@@ -14,19 +24,26 @@ category_order:
   - Power-Systems
   - Communication-Systems
   - Electromagnetics-RF
+  - Electromagnetic-ElectricalEngineering
   - Semiconductor
   - STM32
   - Embedded-Systems
   - Linux-SystemProgramming
+  - Build-C-CPP
+  - System-Design
   - ComputerArchitecture
   - OperatingSystems
   - DistributedSystems
+  - Go
   - Java
   - Math-Algebra
   - Math-Calculus
   - Math-Statistics
   - Cloud-DevOps
+  - AWS
   - Databases
+  - SQL
+  - Advanced-SQL
   - Security
   - Other
 
@@ -54,6 +71,35 @@ categories:
     - cnn
     - vision transformer
     - yolo
+  CNN:
+    - cnn
+    - convolutional neural network
+    - convolutional network
+    - convnet
+    - conv layer
+    - feature map
+    - image classification
+    - object detection cnn
+  GAN:
+    - gan
+    - generative adversarial network
+    - generator discriminator
+    - adversarial training
+    - dcgan
+    - stylegan
+    - cycle gan
+    - conditional gan
+  Computer-Graphics:
+    - computer graphics
+    - graphics programming
+    - rendering
+    - ray tracing
+    - rasterization
+    - opengl
+    - vulkan
+    - directx
+    - shader
+    - gpu rendering
   NLP:
     - natural language processing
     - nlp
@@ -89,6 +135,81 @@ categories:
     - rag
     - agentic
     - language model
+  Generative-AI:
+    - generative ai
+    - text to image
+    - image generation
+    - diffusion model
+    - stable diffusion
+    - generative model
+    - content generation
+    - ai generation
+  Transformer-DeepLearning:
+    - transformer architecture
+    - attention mechanism
+    - self attention
+    - multi head attention
+    - positional encoding
+    - encoder decoder
+    - vision transformer
+    - swin transformer
+    - transformer based deep learning
+    - sequence to sequence transformer
+  Transfer-Learning:
+    - transfer learning
+    - fine tuning
+    - fine tune
+    - pretrained model
+    - pre trained model
+    - domain adaptation
+    - feature extractor
+    - few shot learning
+    - zero shot learning
+    - model adaptation
+  Genetic-Algorithms:
+    - genetic algorithm
+    - genetic algorithms
+    - evolutionary algorithm
+    - evolutionary computation
+    - evolution strategy
+    - genetic programming
+    - crossover
+    - mutation
+    - fitness function
+    - selection operator
+  CUDA:
+    - cuda
+    - nvidia cuda
+    - cuda programming
+    - cuda c
+    - cudnn
+    - cuda kernel
+    - warp
+    - thread block
+    - gpu programming
+    - gpu acceleration
+  Parallel-Computing:
+    - parallel computing
+    - concurrent computing
+    - high performance computing
+    - hpc
+    - openmp
+    - mpi
+    - multicore
+    - distributed memory
+    - shared memory
+    - parallel algorithm
+  Concurrency:
+    - concurrency
+    - concurrent programming
+    - parallelism
+    - thread safety
+    - synchronization
+    - mutex
+    - semaphore
+    - lock free
+    - race condition
+    - deadlock
   Electronics:
     - electronics
     - electronic circuits
@@ -179,6 +300,17 @@ categories:
     - transmission lines
     - maxwell equations
     - smith chart
+  Electromagnetic-ElectricalEngineering:
+    - electromagnetic engineering
+    - electromagnetic theory
+    - electromagnetic field theory
+    - maxwell equations
+    - electric and magnetic fields
+    - field and wave electromagnetics
+    - electrostatics
+    - magnetostatics
+    - electromagnetic waves
+    - electrical engineering electromagnetics
   Semiconductor:
     - semiconductor
     - semiconductor physics
@@ -220,6 +352,32 @@ categories:
     - gnu linux
     - bash scripting
     - shell scripting
+    - linux system programming
+    - epoll
+    - pthread
+    - process and thread
+  Build-C-CPP:
+    - c programming
+    - c++
+    - cpp
+    - makefile
+    - cmake
+    - gcc
+    - g++
+    - clang
+    - build systems
+    - linker
+  System-Design:
+    - system design
+    - scalable systems
+    - high level design
+    - low level design
+    - distributed architecture
+    - api gateway
+    - load balancer
+    - database sharding
+    - caching strategy
+    - reliability engineering
   ComputerArchitecture:
     - computer architecture
     - microarchitecture
@@ -247,6 +405,15 @@ categories:
     - microservices
     - event driven architecture
     - message queue
+  Go:
+    - golang
+    - go language
+    - go programming
+    - goroutine
+    - go routine
+    - go concurrency
+    - go modules
+    - gopher
   Java:
     - java
     - jvm
@@ -286,6 +453,17 @@ categories:
     - elk stack
     - elasticsearch
     - logstash
+  AWS:
+    - aws
+    - amazon web services
+    - ec2
+    - s3
+    - rds
+    - lambda
+    - cloudformation
+    - iam
+    - aws architecture
+    - aws certified
   Databases:
     - database
     - sql
@@ -294,6 +472,26 @@ categories:
     - cypher
     - postgresql
     - query optimization
+  SQL:
+    - sql
+    - structured query language
+    - relational database
+    - joins
+    - group by
+    - window function
+    - ddl
+    - dml
+  Advanced-SQL:
+    - advanced sql
+    - query optimization
+    - execution plan
+    - indexing strategy
+    - cte
+    - common table expression
+    - partitioning
+    - analytic functions
+    - window functions
+    - sql performance tuning
   Security:
     - security
     - cryptography
