@@ -5,8 +5,11 @@ from __future__ import annotations
 
 import hashlib
 import html
+import platform
+import shutil
+import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import streamlit as st
 from PIL import Image
@@ -95,6 +98,36 @@ def _card_title(text: str) -> str:
     return clean
 
 
+def open_pdf_in_file_manager(pdf_path: str) -> Tuple[bool, str]:
+    path = Path(pdf_path).expanduser()
+    if not path.exists():
+        return False, f"File not found: {path}"
+
+    system_name = platform.system()
+    try:
+        if system_name == "Darwin":
+            subprocess.Popen(["open", "-R", str(path)])
+            return True, "Opened in Finder."
+
+        if system_name == "Windows":
+            subprocess.Popen(["explorer", f"/select,{path}"])
+            return True, "Opened in File Explorer."
+
+        # Linux and other Unix environments.
+        if shutil.which("nautilus"):
+            subprocess.Popen(["nautilus", "--select", str(path)])
+            return True, "Opened in file manager."
+        if shutil.which("dolphin"):
+            subprocess.Popen(["dolphin", "--select", str(path)])
+            return True, "Opened in file manager."
+        if shutil.which("xdg-open"):
+            subprocess.Popen(["xdg-open", str(path.parent)])
+            return True, "Opened parent folder."
+        return False, "No supported file manager command found."
+    except Exception as exc:
+        return False, f"Could not open file location: {exc}"
+
+
 def render_result_grid(
     items: List[dict],
     cover_cache_dir: str,
@@ -124,6 +157,11 @@ def render_result_grid(
                     st.markdown(f"<div class='book-card-title'>{title}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div class='book-card-meta'>{meta}</div>", unsafe_allow_html=True)
                     if st.button("View Details", key=f"{button_key_prefix}-{start}-{col_idx}-{item.get('book_id')}"):
+                        ok, message = open_pdf_in_file_manager(item.get("absolute_path", ""))
+                        if ok:
+                            st.toast(message, icon="📂")
+                        else:
+                            st.warning(message)
                         st.session_state["selected_book_id"] = item.get("book_id")
 
 
