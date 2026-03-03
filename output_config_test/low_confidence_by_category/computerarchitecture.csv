@@ -1,0 +1,11 @@
+confidence_threshold,category,confidence,title,filename,absolute_path,matched_keywords
+0.350,ComputerArchitecture,0.238,Evidence of my previous study VGU,Evidence of my previous study VGU.pdf,/Users/longtran/Downloads/Evidence of my previous study VGU.pdf,body:computer architecture
+0.350,ComputerArchitecture,0.238,exam_21ss_solution,exam_21ss_solution.pdf,/Users/longtran/Downloads/exam_21ss_solution.pdf,body:pipelining
+0.350,ComputerArchitecture,0.238,exam_21ss_solution (1),exam_21ss_solution (1).pdf,/Users/longtran/Downloads/exam_21ss_solution (1).pdf,body:pipelining
+0.350,ComputerArchitecture,0.238,exam_21ss_solution (2),exam_21ss_solution (2).pdf,/Users/longtran/Downloads/exam_21ss_solution (2).pdf,body:pipelining
+0.350,ComputerArchitecture,0.288,08_exercise,08_exercise.pdf,/Users/longtran/Downloads/08_exercise.pdf,body:pipelining
+0.350,ComputerArchitecture,0.288,08_exercise (1),08_exercise (1).pdf,/Users/longtran/Downloads/08_exercise (1).pdf,body:pipelining
+0.350,ComputerArchitecture,0.288,08_solution,08_solution.pdf,/Users/longtran/Downloads/08_solution.pdf,body:pipelining
+0.350,ComputerArchitecture,0.288,Reconfigurable Computing - Implementation & Timing,08_impl_timing (1).pdf,/Users/longtran/Downloads/08_impl_timing (1).pdf,body:pipelining
+0.350,ComputerArchitecture,0.288,Reconfigurable Computing - Implementation & Timing,08_impl_timing (2).pdf,/Users/longtran/Downloads/08_impl_timing (2).pdf,body:pipelining
+0.350,ComputerArchitecture,0.288,Reconfigurable Computing - Implementation & Timing,08_impl_timing.pdf,/Users/longtran/Downloads/08_impl_timing.pdf,body:pipelining

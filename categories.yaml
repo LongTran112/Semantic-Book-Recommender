@@ -1,0 +1,180 @@
+category_order:
+  - DeepLearning
+  - ComputerVision
+  - NLP
+  - Fourier-Transformers
+  - MachineLearning
+  - AI-LLM
+  - Embedded-Systems
+  - Linux-SystemProgramming
+  - ComputerArchitecture
+  - OperatingSystems
+  - DistributedSystems
+  - Java
+  - Math-Algebra
+  - Math-Calculus
+  - Math-Statistics
+  - Cloud-DevOps
+  - Databases
+  - Security
+  - Other
+
+source_weights:
+  title: 7.0
+  metadata: 6.0
+  filename: 4.0
+  body: 1.5
+
+categories:
+  DeepLearning:
+    - deep learning
+    - neural network
+    - convolutional
+    - transformer
+    - gan
+    - backpropagation
+    - representation learning
+  ComputerVision:
+    - computer vision
+    - image processing
+    - opencv
+    - object detection
+    - image segmentation
+    - cnn
+    - vision transformer
+    - yolo
+  NLP:
+    - natural language processing
+    - nlp
+    - tokenization
+    - named entity recognition
+    - text classification
+    - word embedding
+    - bert
+    - sentiment analysis
+  Fourier-Transformers:
+    - fourier transform
+    - fast fourier transform
+    - fft
+    - frequency domain
+    - spectral analysis
+    - wavelet transform
+    - signal processing
+    - time frequency
+  MachineLearning:
+    - machine learning
+    - supervised learning
+    - unsupervised learning
+    - reinforcement learning
+    - scikit learn
+    - feature engineering
+    - model selection
+  AI-LLM:
+    - large language model
+    - llm
+    - prompt engineering
+    - generative ai
+    - foundation model
+    - rag
+    - agentic
+    - language model
+  Embedded-Systems:
+    - embedded
+    - microcontroller
+    - esp32
+    - arm cortex
+    - firmware
+    - rtos
+    - bare metal
+    - fpga
+    - micropython
+  Linux-SystemProgramming:
+    - linux programming
+    - system programming
+    - posix
+    - syscall
+    - kernel module
+    - gnu linux
+    - bash scripting
+    - shell scripting
+  ComputerArchitecture:
+    - computer architecture
+    - microarchitecture
+    - instruction set
+    - cpu design
+    - cache coherence
+    - pipelining
+    - risc v
+    - assembly language
+  OperatingSystems:
+    - operating system
+    - linux kernel
+    - unix
+    - virtual memory
+    - process scheduling
+    - systems programming
+    - os design
+  DistributedSystems:
+    - distributed systems
+    - distributed computing
+    - fault tolerance
+    - consensus
+    - raft
+    - paxos
+    - microservices
+    - event driven architecture
+    - message queue
+  Java:
+    - java
+    - jvm
+    - spring boot
+    - hibernate
+    - jakarta
+    - maven
+    - gradle
+  Math-Algebra:
+    - linear algebra
+    - abstract algebra
+    - vector space
+    - eigenvalue
+    - matrix
+    - algebra
+  Math-Calculus:
+    - calculus
+    - derivative
+    - integral
+    - multivariable
+    - differential equations
+    - gradient
+  Math-Statistics:
+    - statistics
+    - probability
+    - bayesian
+    - stochastic
+    - hypothesis testing
+    - regression
+  Cloud-DevOps:
+    - docker
+    - kubernetes
+    - devops
+    - cloud computing
+    - terraform
+    - ci cd
+    - elk stack
+    - elasticsearch
+    - logstash
+  Databases:
+    - database
+    - sql
+    - nosql
+    - neo4j
+    - cypher
+    - postgresql
+    - query optimization
+  Security:
+    - security
+    - cryptography
+    - penetration testing
+    - offensive security
+    - threat model
+    - vulnerability

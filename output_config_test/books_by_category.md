@@ -1,0 +1,625 @@
+# Technical PDF Index by Category
+
+Total PDFs: **581**
+
+## DeepLearning (1)
+- **1769138284281**  (confidence: 0.238)  `/Users/longtran/Downloads/1769138284281.pdf`  keywords: body:transformer
+
+## ComputerVision (2)
+- **Hands-On ML Projects with OpenCV: Master Computer Vision and Machine Learning Using OpenCV and Python**  (confidence: 1.000)  `/Users/longtran/Downloads/Hands-on ML Projects with OpenCV Master computer vision and Machine Learning using OpenCV and Python (Mugesh S.) (Z-Library).pdf`  keywords: filename:computer vision, filename:opencv, metadata:computer vision, metadata:opencv
+- **YOLOv1 to YOLOv11: A Comprehensive Survey of Real-Time Object Detection Innovations and Challenges**  (confidence: 1.000)  `/Users/longtran/Downloads/YOLOv1_to_YOLOv11_A_Comprehensive_Survey_of_Real-T.pdf`  keywords: body:cnn, body:computer vision, body:object detection, body:yolo
+
+## NLP (0)
+- _No books found in this category._
+
+## Fourier-Transformers (3)
+- **Digital Signal Processing Using MATLAB, 3rd ed.**  (confidence: 1.000)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/_weeboo_1854817494554035/files/799470570860772.pdf`  keywords: body:signal processing, metadata:signal processing, title:signal processing
+- **Digital Signal Processing: Principles, Algorithms & Applications (3rd Ed.) [ripped by sabbanji]**  (confidence: 0.958)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/_weeboo_1854817494554035/files/1728183853987431.pdf`  keywords: metadata:signal processing, title:signal processing
+- **04_lab_hardware_acceleration**  (confidence: 0.288)  `/Users/longtran/Downloads/04_lab_hardware_acceleration.pdf`  keywords: body:signal processing
+
+## MachineLearning (27)
+- **Project Template Machine Learning v1.0 (4)**  (confidence: 1.000)  `/Users/longtran/Downloads/Project Template Machine Learning v1.0 (4).pdf`  keywords: body:feature engineering, body:machine learning, filename:machine learning, metadata:machine learning
+- **Project Template Machine Learning v1.0 (4)**  (confidence: 1.000)  `/Users/longtran/Downloads/Project_Template_Submission (1).pdf`  keywords: body:feature engineering, body:machine learning, metadata:machine learning, title:machine learning
+- **Project Template Machine Learning v1.0 (4)**  (confidence: 1.000)  `/Users/longtran/Downloads/Project_Template_Submission (2).pdf`  keywords: body:feature engineering, body:machine learning, metadata:machine learning, title:machine learning
+- **Project Template Machine Learning v1.0 (4)**  (confidence: 1.000)  `/Users/longtran/Downloads/Project_Template_Submission.pdf`  keywords: body:feature engineering, body:machine learning, metadata:machine learning, title:machine learning
+- **2025_05_12_Pruefungsplanung_SoSe2025_Studierende.xlsx**  (confidence: 0.288)  `/Users/longtran/Downloads/2025-05-31_Pruefungsplan_SoSe2025_Portfolio-etc_cg.pdf`  keywords: body:reinforcement learning
+- **Consumption Car Presentation Slides**  (confidence: 0.288)  `/Users/longtran/Downloads/Consumption Car Presentation Slides.pdf`  keywords: body:machine learning
+- **Consumption Car Presentation Slides**  (confidence: 0.288)  `/Users/longtran/Downloads/Group5_Project_Work_Submission/Deliverable4/Consumption Car Presentation Slides.pdf`  keywords: body:machine learning
+- **Print**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/recprteam3_2620023841369882/files/398165324202934.pdf`  keywords: body:machine learning
+- **Project Management Abstract & Technical Specificationment**  (confidence: 0.288)  `/Users/longtran/Downloads/Group5_Project_Work_Submission/Deliverable1/Project Management Abstract & Technical Specificationment.pdf`  keywords: body:machine learning
+- **Project Management Abstract & Technical Specificationment**  (confidence: 0.288)  `/Users/longtran/Downloads/Project Management Abstract & Technical Specificationment.pdf`  keywords: body:machine learning
+- **Project Overview (1)**  (confidence: 0.288)  `/Users/longtran/Downloads/Project Overview (1).pdf`  keywords: body:machine learning
+- **Sanju_Raj_Prasad_Reflective_Report_ML_applications**  (confidence: 0.288)  `/Users/longtran/Downloads/Group5_Project_Work_Submission/Deliverable3/Sanju_Raj_Prasad_Reflective_Report_ML_applications.pdf`  keywords: body:machine learning
+- **Sanju_Raj_Prasad_Reflective_Report_ML_applications**  (confidence: 0.288)  `/Users/longtran/Downloads/Sanju_Raj_Prasad_Reflective_Report_ML_applications.pdf`  keywords: body:machine learning
+- **2025-12-15_Portfolio_Projektarbeit_etc_WiSe2025.xlsx**  (confidence: 0.238)  `/Users/longtran/Downloads/2025-12_Portfolio_Projektarbeit_etc_WiSe2025.pdf`  keywords: body:machine learning
+- **2025_05_12_Pruefungsplanung_SoSe2025_Studierende.xlsx**  (confidence: 0.238)  `/Users/longtran/Downloads/2025-05-31_Pruefungsplan_SoSe2025_Klausuren-Fachgespraeche_cg.pdf`  keywords: body:machine learning
+- **Belegungen und Prüfungsanmeldungen**  (confidence: 0.238)  `/Users/longtran/Downloads/Belegungen und Prüfungsanmeldungen (4).pdf`  keywords: body:machine learning
+- **Belegungen und Prüfungsanmeldungen**  (confidence: 0.238)  `/Users/longtran/Downloads/Belegungen und Prüfungsanmeldungen (5).pdf`  keywords: body:machine learning
+- **current_self_report**  (confidence: 0.238)  `/Users/longtran/Downloads/current_self_report.pdf`  keywords: body:machine learning
+- **Global-Software-Development-MA-Modulbeschreibungen**  (confidence: 0.238)  `/Users/longtran/Downloads/Global-Software-Development-MA-Modulbeschreibungen.pdf`  keywords: body:machine learning
+- **Global-Software-Development-MA-Studienplan**  (confidence: 0.238)  `/Users/longtran/Downloads/Global-Software-Development-MA-Studienplan.pdf`  keywords: body:machine learning
+- **Global-Software-Development-MA-Studienplan (1)**  (confidence: 0.238)  `/Users/longtran/Downloads/Global-Software-Development-MA-Studienplan (1).pdf`  keywords: body:machine learning
+- **Long_Phan_Phuc_Tran_Reflective_Report_ML_applications**  (confidence: 0.238)  `/Users/longtran/Downloads/Group5_Project_Work_Submission/Deliverable3/Long_Phan_Phuc_Tran_Reflective_Report_ML_applications.pdf`  keywords: body:machine learning
+- **Long_Phan_Phuc_Tran_Reflective_Report_ML_applications**  (confidence: 0.238)  `/Users/longtran/Downloads/Long_Phan_Phuc_Tran_Reflective_Report_ML_applications.pdf`  keywords: body:machine learning
+- **ML in eng - Reflective Summary**  (confidence: 0.238)  `/Users/longtran/Downloads/Group5_Project_Work_Submission/Deliverable3/Kushal_Kattel_Reflective_Report_ML_applications.pdf`  keywords: body:machine learning
+- **ML in eng - Reflective Summary**  (confidence: 0.238)  `/Users/longtran/Downloads/Kushal_Kattel_Reflective_Report_ML_applications.pdf`  keywords: body:machine learning
+- **Sanju_Raj_Prasad_Reflective_Report_ML_applications**  (confidence: 0.238)  `/Users/longtran/Downloads/Group5_Project_Work_Submission/Deliverable3/Yash_Arvindbhai_Dodiya_Reflective_Report_ML_applications.pdf`  keywords: body:machine learning
+- **Sanju_Raj_Prasad_Reflective_Report_ML_applications**  (confidence: 0.238)  `/Users/longtran/Downloads/Yash_Arvindbhai_Dodiya_Reflective_Report_ML_applications.pdf`  keywords: body:machine learning
+
+## AI-LLM (1)
+- **Milestone 4**  (confidence: 0.238)  `/Users/longtran/Downloads/Milestone 4.pdf`  keywords: body:generative ai
+
+## Embedded-Systems (30)
+- **Reconfigurable Computing: The Theory and Practice of FPGA-Based Computation**  (confidence: 1.000)  `/Users/longtran/Downloads/(Systems on Silicon) Scott Hauck, AndrÃ© DeHon - Reconfigurable computing_ the theory and practice of FPGA-based computation-Morgan Kaufmann (2007).pdf`  keywords: filename:fpga, metadata:fpga, title:fpga
+- **Zynq-7000 SoC Data Sheet: Overview (DS190)**  (confidence: 0.588)  `/Users/longtran/Downloads/ds190-Zynq-7000-Overview.pdf`  keywords: body:arm cortex, metadata:arm cortex
+- **02a_lab_creating_ps**  (confidence: 0.375)  `/Users/longtran/Downloads/02a_lab_creating_ps.pdf`  keywords: body:arm cortex, body:embedded
+- **03_solution**  (confidence: 0.375)  `/Users/longtran/Downloads/03_solution.pdf`  keywords: body:arm cortex, body:fpga
+- **01_exercise**  (confidence: 0.288)  `/Users/longtran/Downloads/01_exercise.pdf`  keywords: body:fpga
+- **01_exercise (1)**  (confidence: 0.288)  `/Users/longtran/Downloads/01_exercise (1).pdf`  keywords: body:fpga
+- **01_exercise (1)_merged**  (confidence: 0.288)  `/Users/longtran/Downloads/01_exercise (1)_merged.pdf`  keywords: body:fpga
+- **01_exercise (1)_merged (1)**  (confidence: 0.288)  `/Users/longtran/Downloads/01_exercise (1)_merged (1).pdf`  keywords: body:fpga
+- **01_lab_vivado_tutorial**  (confidence: 0.288)  `/Users/longtran/Downloads/01_lab_vivado_tutorial.pdf`  keywords: body:fpga
+- **01_solution**  (confidence: 0.288)  `/Users/longtran/Downloads/01_solution.pdf`  keywords: body:fpga
+- **02_exercise**  (confidence: 0.288)  `/Users/longtran/Downloads/02_exercise.pdf`  keywords: body:fpga
+- **02_exercise (1)**  (confidence: 0.288)  `/Users/longtran/Downloads/02_exercise (1).pdf`  keywords: body:fpga
+- **02_solution**  (confidence: 0.288)  `/Users/longtran/Downloads/02_solution.pdf`  keywords: body:fpga
+- **03_exercise**  (confidence: 0.288)  `/Users/longtran/Downloads/03_exercise.pdf`  keywords: body:fpga
+- **03_exercise (1)**  (confidence: 0.288)  `/Users/longtran/Downloads/03_exercise (1).pdf`  keywords: body:fpga
+- **exam_20ss**  (confidence: 0.288)  `/Users/longtran/Downloads/exam_20ss.pdf`  keywords: body:fpga
+- **exam_20ss (1)**  (confidence: 0.288)  `/Users/longtran/Downloads/exam_20ss (1).pdf`  keywords: body:fpga
+- **exam_20ss (2)**  (confidence: 0.288)  `/Users/longtran/Downloads/exam_20ss (2).pdf`  keywords: body:fpga
+- **ILP_additional_exercise**  (confidence: 0.288)  `/Users/longtran/Downloads/ILP_additional_exercise.pdf`  keywords: body:fpga
+- **ILP_additional_solution**  (confidence: 0.288)  `/Users/longtran/Downloads/ILP_additional_solution.pdf`  keywords: body:fpga
+- **Reconfigurable Computing - Introduction**  (confidence: 0.288)  `/Users/longtran/Downloads/01_introduction_fpga1 (1).pdf`  keywords: body:embedded
+- **Reconfigurable Computing - Introduction**  (confidence: 0.288)  `/Users/longtran/Downloads/01_introduction_fpga1 (2).pdf`  keywords: body:embedded
+- **Reconfigurable Computing - Introduction**  (confidence: 0.288)  `/Users/longtran/Downloads/01_introduction_fpga1 (3).pdf`  keywords: body:embedded
+- **Reconfigurable Computing - Introduction**  (confidence: 0.288)  `/Users/longtran/Downloads/01_introduction_fpga1.pdf`  keywords: body:embedded
+- **Reconfigurable Computing - Reconfigurable Computing Systems**  (confidence: 0.288)  `/Users/longtran/Downloads/02_fpga2 (1).pdf`  keywords: body:embedded
+- **Reconfigurable Computing - Reconfigurable Computing Systems**  (confidence: 0.288)  `/Users/longtran/Downloads/02_fpga2.pdf`  keywords: body:embedded
+- **tvlsi_march_04**  (confidence: 0.288)  `/Users/longtran/Downloads/tvlsi_march_04.pdf`  keywords: body:fpga
+- **Microsoft Word - SWA doc**  (confidence: 0.238)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/caitoikhonglocuaalanfelix_2212840072290489/files/144716223675112.pdf`  keywords: body:firmware
+- **Microsoft Word - SWA doc**  (confidence: 0.238)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/phannguyenlong_2156116427803313/files/380194666563657.pdf`  keywords: body:firmware
+- **Microsoft Word - SWA doc**  (confidence: 0.238)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/sweproject_3416043618513792/files/292365305494667.pdf`  keywords: body:firmware
+
+## Linux-SystemProgramming (0)
+- _No books found in this category._
+
+## ComputerArchitecture (10)
+- **08_exercise**  (confidence: 0.288)  `/Users/longtran/Downloads/08_exercise.pdf`  keywords: body:pipelining
+- **08_exercise (1)**  (confidence: 0.288)  `/Users/longtran/Downloads/08_exercise (1).pdf`  keywords: body:pipelining
+- **08_solution**  (confidence: 0.288)  `/Users/longtran/Downloads/08_solution.pdf`  keywords: body:pipelining
+- **Reconfigurable Computing - Implementation & Timing**  (confidence: 0.288)  `/Users/longtran/Downloads/08_impl_timing (1).pdf`  keywords: body:pipelining
+- **Reconfigurable Computing - Implementation & Timing**  (confidence: 0.288)  `/Users/longtran/Downloads/08_impl_timing (2).pdf`  keywords: body:pipelining
+- **Reconfigurable Computing - Implementation & Timing**  (confidence: 0.288)  `/Users/longtran/Downloads/08_impl_timing.pdf`  keywords: body:pipelining
+- **Evidence of my previous study VGU**  (confidence: 0.238)  `/Users/longtran/Downloads/Evidence of my previous study VGU.pdf`  keywords: body:computer architecture
+- **exam_21ss_solution**  (confidence: 0.238)  `/Users/longtran/Downloads/exam_21ss_solution.pdf`  keywords: body:pipelining
+- **exam_21ss_solution (1)**  (confidence: 0.238)  `/Users/longtran/Downloads/exam_21ss_solution (1).pdf`  keywords: body:pipelining
+- **exam_21ss_solution (2)**  (confidence: 0.238)  `/Users/longtran/Downloads/exam_21ss_solution (2).pdf`  keywords: body:pipelining
+
+## OperatingSystems (6)
+- **Learning the bash Shell, 3rd Edition**  (confidence: 0.783)  `/Users/longtran/Downloads/Learning the bash Shell Unix Shell Programming, 3rd Edition (Cameron Newham, Bill Rosenblatt) (Z-Library).pdf`  keywords: filename:unix, metadata:unix
+- **matlab_quickref.PDF**  (confidence: 0.325)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/hadang_2127811640793333/files/274358450176763.pdf`  keywords: body:operating system, body:unix
+- **204805324213333**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/recs2019_3072057276144053/files/204805324213333.pdf`  keywords: body:operating system
+- **2396391814032769**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lamittaiduc_9801181856619668/files/2396391814032769.pdf`  keywords: body:unix
+- **Microsoft Word - Final Exam 1st**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/filtered_threads/lopthaymoiz_5965776373432778/files/694974961683365.pdf`  keywords: body:operating system
+- **686511698913163**  (confidence: 0.238)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/quocthaingo_2258510017703704/files/686511698913163.pdf`  keywords: body:operating system
+
+## DistributedSystems (4)
+- **Lecture13_DA_2526_Workflows_Microservices**  (confidence: 1.000)  `/Users/longtran/Downloads/Lecture13_DA_2526_Workflows_Microservices.pdf`  keywords: filename:microservices, metadata:microservices, title:microservices
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/LabReportWeek5/LabReportWeek5.pdf`  keywords: body:fault tolerance
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/LabReportWeek5.pdf`  keywords: body:fault tolerance
+- **DrDroid Assignment**  (confidence: 0.238)  `/Users/longtran/Downloads/DrDroid Assignment.pdf`  keywords: body:microservices
+
+## Java (43)
+- **DA-Questions**  (confidence: 0.412)  `/Users/longtran/Downloads/DA-Questions.pdf`  keywords: body:java, body:maven, body:spring boot
+- **DA-Questions (1)**  (confidence: 0.412)  `/Users/longtran/Downloads/DA-Questions (1).pdf`  keywords: body:java, body:maven, body:spring boot
+- **Tran Phan Phuc Long**  (confidence: 0.362)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/huongphan_1659946430913192/files/785869392922850.pdf`  keywords: body:hibernate, body:java, body:spring boot
+- **(anonymous)**  (confidence: 0.325)  `/Users/longtran/Downloads/LongTran_CV_German.pdf`  keywords: body:java, body:spring boot
+- **Long Phan-Phuc Tran Resume**  (confidence: 0.325)  `/Users/longtran/Downloads/LongPhanPhucTranResume-Master-CSE.pdf`  keywords: body:java, body:spring boot
+- **Long Phan-Phuc Tran Resume**  (confidence: 0.325)  `/Users/longtran/Downloads/LongPhanPhucTranResume.pdf`  keywords: body:java, body:spring boot
+- **Tran-Phan-Phuc-Long.pdf**  (confidence: 0.325)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/phatnguyen_1176531192520720/files/1031463501048613.pdf`  keywords: body:java, body:spring boot
+- **Tran-Phan-Phuc-Long.pdf**  (confidence: 0.325)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/phatnguyen_1176531192520720/files/248574700822644.pdf`  keywords: body:java, body:spring boot
+- **Tran-Phan-Phuc-Long.pdf**  (confidence: 0.325)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/phatnguyen_1176531192520720/files/535701221128176.pdf`  keywords: body:java, body:spring boot
+- **1686608861524705**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/sedss2021_4243920848959481/files/1686608861524705.pdf`  keywords: body:java
+- **Cloudera_Academic_Partnership_3**  (confidence: 0.288)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_3.pdf`  keywords: body:java
+- **Hadoop: The Definitive Guide**  (confidence: 0.288)  `/Users/longtran/Downloads/Hadoop File Types (1).pdf`  keywords: body:java
+- **Hadoop: The Definitive Guide**  (confidence: 0.288)  `/Users/longtran/Downloads/Hadoop File Types (2).pdf`  keywords: body:java
+- **Hadoop: The Definitive Guide**  (confidence: 0.288)  `/Users/longtran/Downloads/Hadoop File Types (3).pdf`  keywords: body:java
+- **Hadoop: The Definitive Guide**  (confidence: 0.288)  `/Users/longtran/Downloads/Hadoop File Types (4).pdf`  keywords: body:java
+- **Hadoop: The Definitive Guide**  (confidence: 0.288)  `/Users/longtran/Downloads/Hadoop File Types (5).pdf`  keywords: body:java
+- **Hadoop: The Definitive Guide**  (confidence: 0.288)  `/Users/longtran/Downloads/Hadoop File Types.pdf`  keywords: body:java
+- **Homework_Labs_Lecture02**  (confidence: 0.288)  `/Users/longtran/Downloads/Homework_Labs_Lecture02.pdf`  keywords: body:java
+- **Homework_Labs_Lecture06**  (confidence: 0.288)  `/Users/longtran/Downloads/Homework_Labs_Lecture06.pdf`  keywords: body:java
+- **Interrcuturl-Portfolio 2**  (confidence: 0.288)  `/Users/longtran/Downloads/Long-Phan-Phuc-Tran-1573950-Interrcultural-Portfolio-2.pdf`  keywords: body:java
+- **Lecture0_DA_2526**  (confidence: 0.288)  `/Users/longtran/Downloads/Lecture0_DA_2526.pdf`  keywords: body:java
+- **Lecture0_DA_2526 2**  (confidence: 0.288)  `/Users/longtran/Downloads/Lecture0_DA_2526 2.pdf`  keywords: body:java
+- **Lecture1_DA_2526**  (confidence: 0.288)  `/Users/longtran/Downloads/Lecture1_DA_2526.pdf`  keywords: body:java
+- **MDD Week 2 report**  (confidence: 0.288)  `/Users/longtran/Downloads/Week 2 submission/MDD Week 2 report.pdf`  keywords: body:java
+- **MDD Week 2 report**  (confidence: 0.288)  `/Users/longtran/Downloads/Week 2 submission 2/MDD Week 2 report.pdf`  keywords: body:java
+- **SequenceFileReadDemo-9**  (confidence: 0.288)  `/Users/longtran/Downloads/ReadDemo.pdf`  keywords: body:java
+- **SequenceFileWriteDemo**  (confidence: 0.288)  `/Users/longtran/Downloads/WriteDemo (1).pdf`  keywords: body:java
+- **SequenceFileWriteDemo**  (confidence: 0.288)  `/Users/longtran/Downloads/WriteDemo.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/AvgWordLengthMapper.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/AvgWordLengthReducer.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/CombinerMapper.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/CombinerReducer.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/Count.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/Histogram.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/LabReportWeek5/Count.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/LabReportWeek5/Histogram.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/LabReportWeek5/MyJob.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/LogMapper.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/LogReducer.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/MyJob.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/ToolsRunnerMapper.pdf`  keywords: body:java
+- **Untitled**  (confidence: 0.288)  `/Users/longtran/Downloads/ToolsRunnerReducer.pdf`  keywords: body:java
+- **Umple as Template Language - no comments**  (confidence: 0.238)  `/Users/longtran/Downloads/Umple as Template Language - no comments.pdf`  keywords: body:java
+
+## Math-Algebra (19)
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (1).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (10).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (11).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (2).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (3).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (4).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (5).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (6).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (7).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (8).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02 (9).pdf`  keywords: body:matrix
+- **Parallel Programming, WT 25/26, Exercise 2—MPI**  (confidence: 0.288)  `/Users/longtran/Downloads/ParaProg_WT25_Exam02.pdf`  keywords: body:matrix
+- **Pararrel Programming**  (confidence: 0.288)  `/Users/longtran/Downloads/Pararrel Programming.pdf`  keywords: body:matrix
+- **Pararrel Programming**  (confidence: 0.288)  `/Users/longtran/Downloads/Presentation_Mahesh_and_long.pdf`  keywords: body:matrix
+- **performance_analysis**  (confidence: 0.288)  `/Users/longtran/Downloads/mahesh_and_long_submission/Long_Tran_1573950_fd0003900/performance_analysis.pdf`  keywords: body:matrix
+- **performance_analysis**  (confidence: 0.288)  `/Users/longtran/Downloads/mahesh_and_long_submission (1)/Long_Tran_1573950_fd0003900/performance_analysis.pdf`  keywords: body:matrix
+- **Report**  (confidence: 0.288)  `/Users/longtran/Downloads/mahesh_and_long_submission/Mahesh_Sharma_1553194_fd0002153/Report.pdf`  keywords: body:matrix
+- **Report**  (confidence: 0.288)  `/Users/longtran/Downloads/mahesh_and_long_submission (1)/Mahesh_Sharma_1553194_fd0002153/Report.pdf`  keywords: body:matrix
+- **Studiengang   Informatik,   WS 2003/04**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/tranlong_1730986033809231/files/2447627082206375.pdf`  keywords: body:algebra
+
+## Math-Calculus (5)
+- **466508404076560**  (confidence: 0.375)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/hadang_2127811640793333/files/466508404076560.pdf`  keywords: body:calculus, body:derivative
+- **520786182044757**  (confidence: 0.375)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/hadang_2127811640793333/files/520786182044757.pdf`  keywords: body:calculus, body:integral
+- **556889821782759**  (confidence: 0.375)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/hadang_2127811640793333/files/556889821782759.pdf`  keywords: body:calculus, body:integral
+- **2330408230517419**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/recs2019_3072057276144053/files/2330408230517419.pdf`  keywords: body:derivative
+- **917484111964538**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/hadang_2127811640793333/files/917484111964538.pdf`  keywords: body:calculus
+
+## Math-Statistics (0)
+- _No books found in this category._
+
+## Cloud-DevOps (59)
+- **Ansible for DevOps**  (confidence: 1.000)  `/Users/longtran/Downloads/Ansible for DevOps (Jeff Geerling) (Z-Library).pdf`  keywords: body:devops, filename:devops, metadata:devops, title:devops
+- **Build Images with Docker Compose**  (confidence: 1.000)  `/Users/longtran/Downloads/Build+Images+with+Docker+Compose.pdf`  keywords: body:devops, body:docker, filename:docker, metadata:docker
+- **Cloud Native DevOps with Kubernetes**  (confidence: 1.000)  `/Users/longtran/Downloads/Cloud Native DevOps with Kubernetes (John Arundel, Justin Domingus) (Z-Library).pdf`  keywords: filename:devops, filename:kubernetes, metadata:devops, metadata:kubernetes
+- **Create a Docker Compose File**  (confidence: 1.000)  `/Users/longtran/Downloads/Create+a+Docker+Compose+File.pdf`  keywords: body:devops, body:docker, filename:docker, metadata:docker
+- **Docker Network : DNS Concept**  (confidence: 1.000)  `/Users/longtran/Downloads/Docker+Network+_+DNS+Concept.pdf`  keywords: body:devops, body:docker, filename:docker, metadata:docker
+- **Hands-On Kubernetes, Service Mesh and Zero-Trust**  (confidence: 1.000)  `/Users/longtran/Downloads/Hands-On Kubernetes, Service Mesh and Zero-Trust Build and manage secure applications using Kubernetes and Istio (Swapnil Dubey, Mandar J. Kulkarni) (Z-Library).pdf`  keywords: filename:kubernetes, metadata:kubernetes, title:kubernetes
+- **Install Kubernetes**  (confidence: 1.000)  `/Users/longtran/Downloads/Install+Kubernetes.pdf`  keywords: body:kubernetes, filename:kubernetes, metadata:kubernetes, title:kubernetes
+- **Kubernetes Best Practices**  (confidence: 1.000)  `/Users/longtran/Downloads/Kubernetes Best Practices Blueprints for Building Successful Applications on Kubernetes - Second Edition (Brendan Burns, Eddie Villalba, Dave Strebel etc.) (Z-Library).pdf`  keywords: body:cloud computing, body:kubernetes, filename:kubernetes, metadata:kubernetes
+- **Lab : Assignment Solution - Bind Mounts in Docker Container**  (confidence: 1.000)  `/Users/longtran/Downloads/Lab+_+Assignment+Solution+-+Bind+Mounts+in+Docker+Container.pdf`  keywords: body:devops, body:docker, filename:docker, metadata:docker
+- **Terraform : Up and Running (9781098116712)**  (confidence: 1.000)  `/Users/longtran/Downloads/Terraform Up and Running Writing Infrastructure as Code, 3rd Edition (Yevgeniy Brikman) (Z-Library).pdf`  keywords: body:ci cd, body:devops, body:kubernetes, body:terraform
+- **Europass**  (confidence: 0.771)  `/Users/longtran/Downloads/Mein_lebenslauf_Devops.pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV__2_**  (confidence: 0.650)  `/Users/longtran/Downloads/autoCV__2_.pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV__2_ (2)**  (confidence: 0.650)  `/Users/longtran/Downloads/autoCV__2_ (2).pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV__2_English**  (confidence: 0.650)  `/Users/longtran/Downloads/autoCV__2_English.pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV_English**  (confidence: 0.650)  `/Users/longtran/Downloads/autoCV_English.pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV_English_withEnglish_Anschreiben**  (confidence: 0.650)  `/Users/longtran/Downloads/autoCV_English_withEnglish_Anschreiben.pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV_English_withEnglish_Anschreiben (1)**  (confidence: 0.650)  `/Users/longtran/Downloads/autoCV_English_withEnglish_Anschreiben (1).pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV__2_ (1)**  (confidence: 0.562)  `/Users/longtran/Downloads/autoCV__2_ (1).pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV__2_ German**  (confidence: 0.562)  `/Users/longtran/Downloads/autoCV__2_ German.pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV_German**  (confidence: 0.562)  `/Users/longtran/Downloads/autoCV_German.pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV_German_withGerman_Anschreiben (1)**  (confidence: 0.562)  `/Users/longtran/Downloads/autoCV_German_withGerman_Anschreiben (1).pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **Anschreiben_Capgemini**  (confidence: 0.550)  `/Users/longtran/Downloads/Anschreiben_Capgemini.pdf`  keywords: body:ci cd, body:devops, body:kubernetes, body:terraform
+- **Europass**  (confidence: 0.537)  `/Users/longtran/Downloads/Mein_lebenslauf_swe (1).pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **Europass**  (confidence: 0.537)  `/Users/longtran/Downloads/Mein_lebenslauf_swe.pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:docker
+- **autoCV_German_withGerman_Anschreiben**  (confidence: 0.500)  `/Users/longtran/Downloads/autoCV_German_withGerman_Anschreiben.pdf`  keywords: body:ci cd, body:cloud computing, body:devops, body:kubernetes
+- **README**  (confidence: 0.488)  `/Users/longtran/Downloads/README.pdf`  keywords: body:ci cd, body:cloud computing, body:docker, body:kubernetes
+- **README (1)**  (confidence: 0.488)  `/Users/longtran/Downloads/README (1).pdf`  keywords: body:ci cd, body:cloud computing, body:docker, body:kubernetes
+- **Team Lab Report (copied from README)**  (confidence: 0.488)  `/Users/longtran/Downloads/Team Lab Report (copied from README).pdf`  keywords: body:ci cd, body:cloud computing, body:docker, body:kubernetes
+- **Team Lab Report (copied from README) (1)**  (confidence: 0.488)  `/Users/longtran/Downloads/Team Lab Report (copied from README) (1).pdf`  keywords: body:ci cd, body:cloud computing, body:docker, body:kubernetes
+- **Team Lab Report (copied from README) (2)**  (confidence: 0.488)  `/Users/longtran/Downloads/Team Lab Report (copied from README) (2).pdf`  keywords: body:ci cd, body:cloud computing, body:docker, body:kubernetes
+- **AnschreibenDeutscheBoerse.tex**  (confidence: 0.450)  `/Users/longtran/Downloads/AnschreibenDeutscheBoerse.tex.pdf`  keywords: body:ci cd, body:devops, body:kubernetes, body:terraform
+- **Assignment : SetUp End to End WebApplication**  (confidence: 0.375)  `/Users/longtran/Downloads/Assignment+_+SetUp+End+to+End+WebApplication.pdf`  keywords: body:devops, body:docker
+- **AWS EKS Introduction**  (confidence: 0.375)  `/Users/longtran/Downloads/AWS+EKS+Introduction.pdf`  keywords: body:kubernetes, body:terraform
+- **Anschreiben**  (confidence: 0.362)  `/Users/longtran/Downloads/Anschreiben.pdf`  keywords: body:ci cd, body:devops, body:terraform
+- **autoCV__2_ (4)**  (confidence: 0.362)  `/Users/longtran/Downloads/autoCV__2_ (4).pdf`  keywords: body:ci cd, body:devops, body:terraform
+- **Europass**  (confidence: 0.362)  `/Users/longtran/Downloads/2.pdf`  keywords: body:ci cd, body:docker, body:kubernetes
+- **Europass**  (confidence: 0.362)  `/Users/longtran/Downloads/Mein_Lebenslauf (1).pdf`  keywords: body:ci cd, body:docker, body:kubernetes
+- **Europass**  (confidence: 0.362)  `/Users/longtran/Downloads/Mein_lebenslauf.pdf`  keywords: body:ci cd, body:docker, body:kubernetes
+- **Europass**  (confidence: 0.362)  `/Users/longtran/Downloads/Oktober 2025 CV.pdf`  keywords: body:ci cd, body:docker, body:kubernetes
+- **2025-12-15_Klausuren_Fachgespraeche_WiSe2025.xlsx**  (confidence: 0.288)  `/Users/longtran/Downloads/2025-12_Klausuren_Fachgespraeche_WiSe2025.pdf`  keywords: body:cloud computing
+- **Belegungen und Prüfungsanmeldungen**  (confidence: 0.288)  `/Users/longtran/Downloads/Belegungen und Prüfungsanmeldungen (1).pdf`  keywords: body:cloud computing
+- **Belegungen und Prüfungsanmeldungen**  (confidence: 0.288)  `/Users/longtran/Downloads/Belegungen und Prüfungsanmeldungen (2).pdf`  keywords: body:cloud computing
+- **Belegungen und Prüfungsanmeldungen**  (confidence: 0.288)  `/Users/longtran/Downloads/Belegungen und Prüfungsanmeldungen (3).pdf`  keywords: body:cloud computing
+- **Belegungen und Prüfungsanmeldungen**  (confidence: 0.288)  `/Users/longtran/Downloads/Belegungen und Prüfungsanmeldungen.pdf`  keywords: body:cloud computing
+- **Content-CheatsheetKubernetes**  (confidence: 0.288)  `/Users/longtran/Downloads/Content-CheatsheetKubernetes.pdf`  keywords: body:kubernetes
+- **Next Generation Data Center Networking**  (confidence: 0.288)  `/Users/longtran/Downloads/1-CharacteristicsServiceModels.pdf`  keywords: body:cloud computing
+- **Next Generation Data Center Networking**  (confidence: 0.288)  `/Users/longtran/Downloads/2-ReferenceArchitectures.pdf`  keywords: body:cloud computing
+- **Next Generation Data Center Networking**  (confidence: 0.288)  `/Users/longtran/Downloads/3-MigrationIntegration.pdf`  keywords: body:cloud computing
+- **Next Generation Data Center Networking**  (confidence: 0.288)  `/Users/longtran/Downloads/4-LimitationsOutlook.pdf`  keywords: body:cloud computing
+- **Untitled 2**  (confidence: 0.288)  `/Users/longtran/Downloads/Github_and_Dockerhub_links (1).pdf`  keywords: body:docker
+- **Untitled 2**  (confidence: 0.288)  `/Users/longtran/Downloads/Github_and_Dockerhub_links (2).pdf`  keywords: body:docker
+- **Untitled 2**  (confidence: 0.288)  `/Users/longtran/Downloads/Github_and_Dockerhub_links (3).pdf`  keywords: body:docker
+- **Untitled 2**  (confidence: 0.288)  `/Users/longtran/Downloads/Github_and_Dockerhub_links (4).pdf`  keywords: body:docker
+- **Untitled 2**  (confidence: 0.288)  `/Users/longtran/Downloads/Github_and_Dockerhub_links.pdf`  keywords: body:docker
+- **Übersicht über alle Leistungen / Overview of all Examinations**  (confidence: 0.288)  `/Users/longtran/Downloads/Notenspiegel (1) (1).pdf`  keywords: body:cloud computing
+- **Übersicht über alle Leistungen / Overview of all Examinations**  (confidence: 0.288)  `/Users/longtran/Downloads/Notenspiegel (1).pdf`  keywords: body:cloud computing
+- **Übersicht über alle Leistungen / Overview of all Examinations**  (confidence: 0.288)  `/Users/longtran/Downloads/Notenspiegel.pdf`  keywords: body:cloud computing
+- **Übersicht über bestandene Leistungen / Overview of Passed Examinations**  (confidence: 0.288)  `/Users/longtran/Downloads/Notenspiegel (2).pdf`  keywords: body:cloud computing
+- **Bescheinigung über angemeldete Prüfungen / Overview of Enrolled Examinations**  (confidence: 0.238)  `/Users/longtran/Downloads/Angemeldete Prüfungen.pdf`  keywords: body:cloud computing
+
+## Databases (8)
+- **Markdown To PDF**  (confidence: 0.375)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/pess21145205_3971940269528745/files/901893283987546.pdf`  keywords: body:database, body:sql
+- **2025-26 ExamTemplate-3**  (confidence: 0.288)  `/Users/longtran/Downloads/Part3_TOD_LongPhanPhucTran_1573950.pdf`  keywords: body:database
+- **Markdown To PDF**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/pess21145205_3971940269528745/files/3630946950350126.pdf`  keywords: body:database
+- **Part1_TOD_LongPhanPhucTran_1573950**  (confidence: 0.288)  `/Users/longtran/Downloads/Part1_TOD_LongPhanPhucTran_1573950.pdf`  keywords: body:database
+- **Part1_TOD_LongPhanPhucTran_1573950 (1)**  (confidence: 0.288)  `/Users/longtran/Downloads/Part1_TOD_LongPhanPhucTran_1573950 (1).pdf`  keywords: body:database
+- **Part1_TOD_LongPhanPhucTran_1573950 (2)**  (confidence: 0.288)  `/Users/longtran/Downloads/Part1_TOD_LongPhanPhucTran_1573950 (2).pdf`  keywords: body:database
+- **Part1_TOD_LongPhanPhucTran_1573950 (3)**  (confidence: 0.288)  `/Users/longtran/Downloads/Part1_TOD_LongPhanPhucTran_1573950 (3).pdf`  keywords: body:database
+- **Part1_TOD_LongPhanPhucTran_1573950 (4)**  (confidence: 0.288)  `/Users/longtran/Downloads/Part1_TOD_LongPhanPhucTran_1573950 (4).pdf`  keywords: body:database
+
+## Security (10)
+- **Cloud Native Security Cookbook**  (confidence: 1.000)  `/Users/longtran/Downloads/Cloud Native Security Cookbook Recipes for a Secure Cloud (Josh Armitage) (Z-Library).pdf`  keywords: body:security, filename:security, metadata:security, title:security
+- **Lecture14_DA_2526_Security_Exam**  (confidence: 1.000)  `/Users/longtran/Downloads/Lecture14_DA_2526_Security_Exam.pdf`  keywords: filename:security, metadata:security, title:security
+- **2482157472060555**  (confidence: 0.325)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/nhukhoiduyand2others_2786208004768528/files/2482157472060555.pdf`  keywords: body:cryptography, body:security
+- **202456968181309**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/tuongthaitan_2273951846171219/files/202456968181309.pdf`  keywords: body:security
+- **3370-Tran Phan Phuc Long**  (confidence: 0.288)  `/Users/longtran/Downloads/3370-Tran Phan Phuc Long.pdf`  keywords: body:security
+- **Diapositiva 1**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/quocthaingo_2258510017703704/files/816153775484501.pdf`  keywords: body:cryptography
+- **Interrercultursl-Portfolio 3**  (confidence: 0.288)  `/Users/longtran/Downloads/Long-Phan-Phuc-Tran-1573950-Interrcultural-Portfolio-3.pdf`  keywords: body:security
+- **Sol-01.fm**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/caitoikhonglocuaalanfelix_2212840072290489/files/275995750371719.pdf`  keywords: body:security
+- **Sol-01.fm**  (confidence: 0.288)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/caitoikhonglocuaalanfelix_2212840072290489/files/286436312430303.pdf`  keywords: body:security
+- **Zero Trust Networks**  (confidence: 0.288)  `/Users/longtran/Downloads/Zero Trust Networks, 2nd Edition (Razi Rais, Christina Morillo, Evan Gilman etc.) (Z-Library).pdf`  keywords: body:security
+
+## Other (353)
+- **(anonymous)**  (confidence: 0.050)  `/Users/longtran/Downloads/Long_Tran_Lebenslauf_tegut.pdf`  keywords: none
+- **01_algodat_hh_SS2012_literatur**  (confidence: 0.050)  `/Users/longtran/Downloads/2024-25-ws-TOSWD-RE (1).pdf`  keywords: none
+- **01_algodat_hh_SS2012_literatur**  (confidence: 0.050)  `/Users/longtran/Downloads/2024-25-ws-TOSWD-RE.pdf`  keywords: none
+- **02b_lab_ps_and_pl**  (confidence: 0.050)  `/Users/longtran/Downloads/02b_lab_ps_and_pl.pdf`  keywords: none
+- **03_lab_hls**  (confidence: 0.050)  `/Users/longtran/Downloads/03_lab_hls.pdf`  keywords: none
+- **04_exercise**  (confidence: 0.050)  `/Users/longtran/Downloads/04_exercise.pdf`  keywords: none
+- **04_exercise (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/04_exercise (1).pdf`  keywords: none
+- **04_solution**  (confidence: 0.050)  `/Users/longtran/Downloads/04_solution.pdf`  keywords: none
+- **05_exercise**  (confidence: 0.050)  `/Users/longtran/Downloads/05_exercise.pdf`  keywords: none
+- **05_exercise (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/05_exercise (1).pdf`  keywords: none
+- **05_solution**  (confidence: 0.050)  `/Users/longtran/Downloads/05_solution.pdf`  keywords: none
+- **06_exercise**  (confidence: 0.050)  `/Users/longtran/Downloads/06_exercise.pdf`  keywords: none
+- **06_exercise (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/06_exercise (1).pdf`  keywords: none
+- **06_solution**  (confidence: 0.050)  `/Users/longtran/Downloads/06_solution.pdf`  keywords: none
+- **07_exercise**  (confidence: 0.050)  `/Users/longtran/Downloads/07_exercise.pdf`  keywords: none
+- **07_exercise (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/07_exercise (1).pdf`  keywords: none
+- **07_solution**  (confidence: 0.050)  `/Users/longtran/Downloads/07_solution.pdf`  keywords: none
+- **1009391336183773**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/huongphan_1659946430913192/files/1009391336183773.pdf`  keywords: none
+- **1024503631445530**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/dangcong_2923748014533021/files/1024503631445530.pdf`  keywords: none
+- **1095192041316511**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/dangcong_2923748014533021/files/1095192041316511.pdf`  keywords: none
+- **1172569506882303**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/filtered_threads/lopthaymoiz_5965776373432778/files/1172569506882303.pdf`  keywords: none
+- **1287295904996451**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/huongphan_1659946430913192/files/1287295904996451.pdf`  keywords: none
+- **134795198499915**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/tranlong_1730986033809231/files/134795198499915.pdf`  keywords: none
+- **1773673879540446**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lamtuyetnhi_1773673882873779/files/1773673879540446.pdf`  keywords: none
+- **1865495090283322**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/thimaihoado_2672900946284397/files/1865495090283322.pdf`  keywords: none
+- **1872305072973750**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/projectws2021_4691709907520152/files/1872305072973750.pdf`  keywords: none
+- **197515564929676**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/nguyentran_2121023778138786/files/197515564929676.pdf`  keywords: none
+- **2020-ws-TOSWD-1-Basics-1**  (confidence: 0.050)  `/Users/longtran/Downloads/2020-ws-TOSWD-1-Basics-1.pdf`  keywords: none
+- **2025-26 ExamTemplate-1**  (confidence: 0.050)  `/Users/longtran/Downloads/2025-26 ExamTemplate-1.pdf`  keywords: none
+- **2025-26 ExamTemplate-1 (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/2025-26 ExamTemplate-1 (1).pdf`  keywords: none
+- **2025-26 ExamTemplate-1 (2)**  (confidence: 0.050)  `/Users/longtran/Downloads/2025-26 ExamTemplate-1 (2).pdf`  keywords: none
+- **2025-26 ExamTemplate-2**  (confidence: 0.050)  `/Users/longtran/Downloads/2025-26 ExamTemplate-2.pdf`  keywords: none
+- **2025-26 ExamTemplate-2 (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/Part2_TOD_LongPhanPhucTran_1573950 (1).pdf`  keywords: none
+- **2025-26 ExamTemplate-2 (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/Part2_TOD_LongPhanPhucTran_1573950.pdf`  keywords: none
+- **2026.02.22 Wohnungsgeberbestätigung**  (confidence: 0.050)  `/Users/longtran/Downloads/2026.02.22 Wohnungsgeberbestätigung.pdf`  keywords: none
+- **2125569200925710**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/tuongthaitan_2273951846171219/files/2125569200925710.pdf`  keywords: none
+- **2219951708306358**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudeutschclub_1970364176393471/files/2219951708306358.pdf`  keywords: none
+- **222697426239848**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/entiaytuananh_1865302860275270/files/222697426239848.pdf`  keywords: none
+- **235341088258830**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/letruongduong_961120377404756/files/235341088258830.pdf`  keywords: none
+- **243951363150032**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/ngoctramnguyen_2360158010878889/files/243951363150032.pdf`  keywords: none
+- **245125467205423**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/huongphan_1659946430913192/files/245125467205423.pdf`  keywords: none
+- **248855683751666**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/tuongthaitan_2273951846171219/files/248855683751666.pdf`  keywords: none
+- **2507381079478604**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudcadmin_1829225563866427/files/2507381079478604.pdf`  keywords: none
+- **2656789101301744**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/huongphan_1659946430913192/files/2656789101301744.pdf`  keywords: none
+- **268608260258965**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/sarahnguyen_1774710492770118/files/268608260258965.pdf`  keywords: none
+- **271454743758885**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/recs2019_3072057276144053/files/271454743758885.pdf`  keywords: none
+- **289486488979905**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/_weeboo_1854817494554035/files/289486488979905.pdf`  keywords: none
+- **2959127231029189**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/sedss2021_4243920848959481/files/2959127231029189.pdf`  keywords: none
+- **296544471536172**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/quocthaingo_2258510017703704/files/296544471536172.pdf`  keywords: none
+- **3255000998065005**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/dangcong_2923748014533021/files/3255000998065005.pdf`  keywords: none
+- **335593594565471**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/datphanlongandfacebookuser_4820417837980233/files/335593594565471.pdf`  keywords: none
+- **400780717902446**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/huongphan_1659946430913192/files/400780717902446.pdf`  keywords: none
+- **406098756829798**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudeutschclub_1970364176393471/files/406098756829798.pdf`  keywords: none
+- **437061597422634**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/entiaytuananh_1865302860275270/files/437061597422634.pdf`  keywords: none
+- **441991374340509**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/filtered_threads/lopthaymoiz_5965776373432778/files/441991374340509.pdf`  keywords: none
+- **4726971767356158**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/a22deutsch_4935845119787084/files/4726971767356158.pdf`  keywords: none
+- **494572545186967**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/minhthong_975985339252365/files/494572545186967.pdf`  keywords: none
+- **514996163709103**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/dangcong_2923748014533021/files/514996163709103.pdf`  keywords: none
+- **557518938363974**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudeutschclub_1970364176393471/files/557518938363974.pdf`  keywords: none
+- **592179594626638**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/hadang_2127811640793333/files/592179594626638.pdf`  keywords: none
+- **60a916bf **  (confidence: 0.050)  `/Users/longtran/Downloads/Week 1 - Homework (1).pdf`  keywords: none
+- **60a916bf **  (confidence: 0.050)  `/Users/longtran/Downloads/Week 1 - Homework (2).pdf`  keywords: none
+- **60a916bf **  (confidence: 0.050)  `/Users/longtran/Downloads/Week 1 - Homework.pdf`  keywords: none
+- **60a916bf **  (confidence: 0.050)  `/Users/longtran/Downloads/e6ef4298.pdf`  keywords: none
+- **613248435858606**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/hadang_2127811640793333/files/613248435858606.pdf`  keywords: none
+- **616395552317979**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/levinhnguyen_1897809050361504/files/616395552317979.pdf`  keywords: none
+- **641149803996422**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/dangcong_2923748014533021/files/641149803996422.pdf`  keywords: none
+- **675508671192511**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/minhthong_975985339252365/files/675508671192511.pdf`  keywords: none
+- **682139392827426**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/dangcong_2923748014533021/files/682139392827426.pdf`  keywords: none
+- **682910749815678**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/minhthong_975985339252365/files/682910749815678.pdf`  keywords: none
+- **710696159643892**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/huyentrangduong_2691362514438240/files/710696159643892.pdf`  keywords: none
+- **736063190191966**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/recnewcoreteam_1847286295371905/files/736063190191966.pdf`  keywords: none
+- **743188366833291**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/nguyentuanngoc_10216577081964835/files/743188366833291.pdf`  keywords: none
+- **762960104085274**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudcadmin_1829225563866427/files/762960104085274.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudcadmin_1829225563866427/files/1003937439806208.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudcadmin_1829225563866427/files/1890005087788113.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudcadmin_1829225563866427/files/206962376925739.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudcadmin_1829225563866427/files/2123960561023760.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudcadmin_1829225563866427/files/2458900610818914.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudcadmin_1829225563866427/files/572588309821403.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lethi_2253243884912610/files/1207445546074777.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lethi_2253243884912610/files/133575060892544.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lethi_2253243884912610/files/1756036477834209.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lethi_2253243884912610/files/293304177989336.pdf`  keywords: none
+- **7765 [Converted]**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lethi_2253243884912610/files/597656247338640.pdf`  keywords: none
+- **848481559298873**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/_weeboo_1854817494554035/files/848481559298873.pdf`  keywords: none
+- **976205803302465**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/dangcong_2923748014533021/files/976205803302465.pdf`  keywords: none
+- **A2_Fit2_Pruefungsziele_05_u_B1_Mod**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/hadang_2127811640793333/files/560653257751501.pdf`  keywords: none
+- **AbbingJLinssenO.2023.RequirementsforaDecisionSupportSystem...intheContextofITPortfolioManagement.PVM2023**  (confidence: 0.050)  `/Users/longtran/Downloads/AbbingJLinssenO.2023.RequirementsforaDecisionSupportSystem...intheContextofITPortfolioManagement.PVM2023.pdf`  keywords: none
+- **Amadeus Itinerary Document**  (confidence: 0.050)  `/Users/longtran/Downloads/ITI18284592.pdf`  keywords: none
+- **An example of a well-structured report**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/minhthong_975985339252365/files/1076774325858859.pdf`  keywords: none
+- **An example of a well-structured report**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/minhthong_975985339252365/files/303082697040774.pdf`  keywords: none
+- **An example of a well-structured report**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lethi_2253243884912610/files/279230149658210.pdf`  keywords: none
+- **AntragFreiversuch**  (confidence: 0.050)  `/Users/longtran/Downloads/AntragFreiversuch.pdf`  keywords: none
+- **Anzeigen DIN A4_deutsch_CS5.indd**  (confidence: 0.050)  `/Users/longtran/Downloads/telc-deutsch-b2-uebungstest.pdf`  keywords: none
+- **Arbeitzeugnis_Renesas**  (confidence: 0.050)  `/Users/longtran/Downloads/Arbeitzeugnis_Renesas.pdf`  keywords: none
+- **Artboard 1**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/khoanguyendang_1012950562219826/files/2551320015131904.pdf`  keywords: none
+- **aspekte-neu-b2-lb-kapitelwortschatz.pdf**  (confidence: 0.050)  `/Users/longtran/Downloads/aspekte-neu-b2-lb-kapitelwortschatz.pdf`  keywords: none
+- **Automated_Powertrain_Tradeoff_Design**  (confidence: 0.050)  `/Users/longtran/Downloads/Automated_Powertrain_Tradeoff_Design.pdf`  keywords: none
+- **Automated_Powertrain_Tradeoff_Design (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/Automated_Powertrain_Tradeoff_Design (1).pdf`  keywords: none
+- **Automated_Powertrain_Tradeoff_Design_compressed**  (confidence: 0.050)  `/Users/longtran/Downloads/Automated_Powertrain_Tradeoff_Design_compressed.pdf`  keywords: none
+- **Automated_Powertrain_Tradeoff_Design_compressed (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/Automated_Powertrain_Tradeoff_Design_compressed (1).pdf`  keywords: none
+- **Budget overview_25**  (confidence: 0.050)  `/Users/longtran/Downloads/Budget overview_25.pdf`  keywords: none
+- **BWMA-Questions**  (confidence: 0.050)  `/Users/longtran/Downloads/BWMA-Questions.pdf`  keywords: none
+- **Cloudera_Academic_Partnership_1**  (confidence: 0.050)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_1.pdf`  keywords: none
+- **Cloudera_Academic_Partnership_11**  (confidence: 0.050)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_11.pdf`  keywords: none
+- **Cloudera_Academic_Partnership_12**  (confidence: 0.050)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_12.pdf`  keywords: none
+- **Cloudera_Academic_Partnership_12 (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_12 (1).pdf`  keywords: none
+- **Cloudera_Academic_Partnership_2**  (confidence: 0.050)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_2.pdf`  keywords: none
+- **Cloudera_Academic_Partnership_4**  (confidence: 0.050)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_4.pdf`  keywords: none
+- **Cloudera_Academic_Partnership_5**  (confidence: 0.050)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_5.pdf`  keywords: none
+- **Cloudera_Academic_Partnership_6**  (confidence: 0.050)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_6.pdf`  keywords: none
+- **Cloudera_Academic_Partnership_7**  (confidence: 0.050)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_7.pdf`  keywords: none
+- **Cloudera_Academic_Partnership_8**  (confidence: 0.050)  `/Users/longtran/Downloads/Cloudera_Academic_Partnership_8.pdf`  keywords: none
+- **compilation_da**  (confidence: 0.050)  `/Users/longtran/Downloads/compilation_da.pdf`  keywords: none
+- **Crossing the Chasm, 3rd Edition Marketing and Selling Disruptive Products to Mainstream Customers (Geoffrey A. Moore) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/Crossing the Chasm, 3rd Edition Marketing and Selling Disruptive Products to Mainstream Customers (Geoffrey A. Moore) (Z-Library).pdf`  keywords: none
+- **CUDA C++ Programming Guide**  (confidence: 0.050)  `/Users/longtran/Downloads/CUDA_C_Programming_Guide.pdf`  keywords: none
+- **Deutsch als Fremdsprache Übungsgrammatik fur die Mittelstufe (Friedrich Clamer, Erhard G. Heilmann etc.) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/Deutsch als Fremdsprache Übungsgrammatik fur die Mittelstufe (Friedrich Clamer, Erhard G. Heilmann etc.) (Z-Library).pdf`  keywords: none
+- **Distributed Builds in Jenkins**  (confidence: 0.050)  `/Users/longtran/Downloads/Distributed+Builds+in+Jenkins.pdf`  keywords: none
+- **Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics**  (confidence: 0.050)  `/Users/longtran/Downloads/Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics.pdf`  keywords: none
+- **Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics (1).pdf`  keywords: none
+- **Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics (2)**  (confidence: 0.050)  `/Users/longtran/Downloads/Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics (2).pdf`  keywords: none
+- **Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics (3)**  (confidence: 0.050)  `/Users/longtran/Downloads/Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics (3).pdf`  keywords: none
+- **Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics (4)**  (confidence: 0.050)  `/Users/longtran/Downloads/Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics (4).pdf`  keywords: none
+- **Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics (5)**  (confidence: 0.050)  `/Users/longtran/Downloads/Doc_JA_publications_Supply_Chain_Management_Review - Geographic_Analytics (5).pdf`  keywords: none
+- **E14**  (confidence: 0.050)  `/Users/longtran/Downloads/E14.pdf`  keywords: none
+- **E14 (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/E14 (1).pdf`  keywords: none
+- **E14 (2)**  (confidence: 0.050)  `/Users/longtran/Downloads/E14 (2).pdf`  keywords: none
+- **E14 (3)**  (confidence: 0.050)  `/Users/longtran/Downloads/E14 (3).pdf`  keywords: none
+- **Einfach weiter (Deutsche B2) (Nicole Fernandes, Ines Hälbig, Jana Hensch etc.) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/Einfach weiter (Deutsche B2) (Nicole Fernandes, Ines Hälbig, Jana Hensch etc.) (Z-Library).pdf`  keywords: none
+- **em_uebungsgrammatik.djvu**  (confidence: 0.050)  `/Users/longtran/Downloads/Em Übungsgrammatik Deutsch Als Fremdsprache GERMAN (Axel Hering, Magdalena Matussek) (Z-Library).pdf`  keywords: none
+- **European-Transparent-IT-Job-Market-Report-2025**  (confidence: 0.050)  `/Users/longtran/Downloads/European-Transparent-IT-Job-Market-Report-2025.pdf`  keywords: none
+- **European-Transparent-IT-Job-Market-Report-2025 (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/European-Transparent-IT-Job-Market-Report-2025 (1).pdf`  keywords: none
+- **eventcraft_class_diagram.drawio**  (confidence: 0.050)  `/Users/longtran/Downloads/eventcraft_class_diagram.drawio.pdf`  keywords: extract_timeout
+- **eventcraft_class_diagram.drawio (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/eventcraft_class_diagram.drawio (1).pdf`  keywords: extract_timeout
+- **eventcraft_component_diagram.drawio**  (confidence: 0.050)  `/Users/longtran/Downloads/eventcraft_component_diagram.drawio.pdf`  keywords: none
+- **Evidence of my previous Study FRA**  (confidence: 0.050)  `/Users/longtran/Downloads/Evidence of my previous Study FRA.pdf`  keywords: none
+- **exam_20ss_solution**  (confidence: 0.050)  `/Users/longtran/Downloads/exam_20ss_solution.pdf`  keywords: none
+- **exam_20ss_solution (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/exam_20ss_solution (1).pdf`  keywords: none
+- **exam_20ss_solution (2)**  (confidence: 0.050)  `/Users/longtran/Downloads/exam_20ss_solution (2).pdf`  keywords: none
+- **exam_21ss**  (confidence: 0.050)  `/Users/longtran/Downloads/exam_21ss.pdf`  keywords: none
+- **exam_21ss (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/exam_21ss (1).pdf`  keywords: none
+- **exam_21ss (2)**  (confidence: 0.050)  `/Users/longtran/Downloads/exam_21ss (2).pdf`  keywords: none
+- **Exam_September_Questions**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/sedss2021_4243920848959481/files/278515707421465.pdf`  keywords: none
+- **fe188e4b-ffef-4de9-9b65-b174aa682287**  (confidence: 0.050)  `/Users/longtran/Downloads/fe188e4b-ffef-4de9-9b65-b174aa682287.pdf`  keywords: none
+- **For the Love of Go**  (confidence: 0.050)  `/Users/longtran/Downloads/For the Love of Go (John Arundel) (z-library.sk, 1lib.sk, z-lib.sk).pdf`  keywords: none
+- **FuldaMilestone4SS2024 copy**  (confidence: 0.050)  `/Users/longtran/Downloads/Milestone4.pdf`  keywords: none
+- **Gebührenübersicht Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Fee overview [PDF] (1).pdf`  keywords: none
+- **Gebührenübersicht Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Fee overview [PDF] (2).pdf`  keywords: none
+- **Gebührenübersicht Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Fee overview [PDF].pdf`  keywords: none
+- **GER69308489153 (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/GER69308489153 (1).pdf`  keywords: none
+- **GiayXacNhanSinhVienVaDanhSachHocPhiDaDong**  (confidence: 0.050)  `/Users/longtran/Downloads/GiayXacNhanSinhVienVaDanhSachHocPhiDaDong.pdf`  keywords: none
+- **Girokonto_Antrag**  (confidence: 0.050)  `/Users/longtran/Downloads/Girokonto_Antrag.pdf`  keywords: none
+- **Girokonto_Bedingungen_und_Informationen**  (confidence: 0.050)  `/Users/longtran/Downloads/Girokonto_Bedingungen_und_Informationen.pdf`  keywords: none
+- **Global-Software-Development-MA-SPO**  (confidence: 0.050)  `/Users/longtran/Downloads/Global-Software-Development-MA-SPO.pdf`  keywords: none
+- **gmpl**  (confidence: 0.050)  `/Users/longtran/Downloads/gmpl.pdf`  keywords: none
+- **GPX329055528_auth_letter**  (confidence: 0.050)  `/Users/longtran/Downloads/GPX329055528_auth_letter.pdf`  keywords: none
+- **grün.pdf**  (confidence: 0.050)  `/Users/longtran/Downloads/Prüfungstraining, Goethe-Zertifikat B2  Passend zur neuen Prüfung 2019 (Dieter Maenner) (Z-Library).pdf`  keywords: none
+- **Hadoop in Action**  (confidence: 0.050)  `/Users/longtran/Downloads/[Manning] - Hadoop in Action - [Lam] (1).pdf`  keywords: none
+- **Hadoop in Action**  (confidence: 0.050)  `/Users/longtran/Downloads/[Manning] - Hadoop in Action - [Lam].pdf`  keywords: none
+- **Hammer's German Grammar and Usage, 7th Edition**  (confidence: 0.050)  `/Users/longtran/Downloads/Hammers German Grammar and Usage, 7th Edition (Martin Durrell) (Z-Library).pdf`  keywords: none
+- **HSF_Layout_Campusplan_A4_2024_EN_240607**  (confidence: 0.050)  `/Users/longtran/Downloads/HSF_Layout_Campusplan_A4_2024_EN_240607.pdf`  keywords: extract_error:DependencyError:cryptography>=3.1 is required for AES algorithm
+- **IEEE Std 1028-1997, IEEE Standard for Software Reviews**  (confidence: 0.050)  `/Users/longtran/Downloads/IEEE 1028-2002 - Software Reviews.pdf`  keywords: none
+- **IMG_20250210_0001**  (confidence: 0.050)  `/Users/longtran/Downloads/IMG_20250210_0001.pdf`  keywords: none
+- **IMG_20250210_0001 (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/IMG_20250210_0001 (1).pdf`  keywords: none
+- **Infrastructure as Code**  (confidence: 0.050)  `/Users/longtran/Downloads/Infrastructure as Code Dynamic Systems for the Cloud Age (Kief Morris) (Z-Library).pdf`  keywords: none
+- **Interr Compilation**  (confidence: 0.050)  `/Users/longtran/Downloads/Long-Phan-Phuc-Tran-1573950-Interrcultural-Compilation.pdf`  keywords: none
+- **Interrcultural**  (confidence: 0.050)  `/Users/longtran/Downloads/Long-Phan-Phuc-Tran-1573950-Interrcultural-Portfolio-1 (1).pdf`  keywords: none
+- **Interrcultural**  (confidence: 0.050)  `/Users/longtran/Downloads/Long-Phan-Phuc-Tran-1573950-Interrcultural-Portfolio-1.pdf`  keywords: none
+- **Lab Report 4**  (confidence: 0.050)  `/Users/longtran/Downloads/Lab Report 4.pdf`  keywords: none
+- **Lab Report 4**  (confidence: 0.050)  `/Users/longtran/Downloads/Lab report 4 (1)/Lab Report 4.pdf`  keywords: none
+- **Lecture10_DA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture10_DA_2526.pdf`  keywords: none
+- **Lecture11_DA_2526-TODO-Evalrein**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture11_DA_2526.pdf`  keywords: none
+- **Lecture12_DA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture12_DA_2526.pdf`  keywords: none
+- **Lecture1_BMWA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture1_BMWA_2526.pdf`  keywords: none
+- **Lecture2_BMWA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture2_BMWA_2526.pdf`  keywords: none
+- **Lecture2_DA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture2_DA_2526.pdf`  keywords: none
+- **Lecture3_BMWA2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture3_BMWA2526.pdf`  keywords: none
+- **Lecture3_DA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture3_DA_2526.pdf`  keywords: none
+- **Lecture4_BMWA2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture4_BMWA2526.pdf`  keywords: none
+- **Lecture4_DA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture4_DA_2526.pdf`  keywords: none
+- **Lecture5_BMWA2526_Angular**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture5_BMWA2526_Angular.pdf`  keywords: none
+- **Lecture5_DA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture5_DA_2526.pdf`  keywords: none
+- **Lecture6_BMWA2526_AngularAdvanced_Updated_v20**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture6_BMWA2526_AngularAdvanced_Updated_v20.pdf`  keywords: none
+- **Lecture6_DA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture6_DA_2526.pdf`  keywords: none
+- **Lecture7_BMWA2526_UIandNPMLibraries**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture7_BMWA2526_UIandNPMLibraries.pdf`  keywords: none
+- **Lecture7_DA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture7_DA_2526.pdf`  keywords: none
+- **Lecture8_BMWA2526_Testing**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture8_BMWA2526_Testing.pdf`  keywords: none
+- **Lecture8_DA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture8_DA_2526.pdf`  keywords: none
+- **Lecture9_BMWA2425_State_Eventing_Signals**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture9_BMWA2425_State_Eventing_Signals.pdf`  keywords: none
+- **Lecture9_DA_2526**  (confidence: 0.050)  `/Users/longtran/Downloads/Lecture9_DA_2526.pdf`  keywords: none
+- **Liste unregelmäßige Verben**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/quocthaingo_2258510017703704/files/835702853634426.pdf`  keywords: none
+- **mein_passport_compressed**  (confidence: 0.050)  `/Users/longtran/Downloads/mein_passport_compressed.pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.0 pre-class (1).pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.0 pre-class (2).pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.0 pre-class (3).pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.0 pre-class (4).pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.0 pre-class (5).pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.0 pre-class (6).pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.0 pre-class (7).pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.0 pre-class (8).pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.0 pre-class (9).pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.0 pre-class.pdf`  keywords: none
+- **Microsoft PowerPoint - W5066 IMA Geographic Analytics v3.6 SS2025.pptx**  (confidence: 0.050)  `/Users/longtran/Downloads/W5066 IMA Geographic Analytics v3.6 SS2025 pages 1-148 after class.pdf`  keywords: none
+- **Microsoft Word - Bilder fÃ¼r Teil 3-2**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudeutschclub_1970364176393471/files/1391968694298680.pdf`  keywords: none
+- **Microsoft Word - DC First Meeting 2019 - 2020.docx**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudeutschclub_1970364176393471/files/535970750498230.pdf`  keywords: none
+- **Microsoft Word - Final Exam 1st**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/hungtran_2666851003556058/files/1004421116814793.pdf`  keywords: none
+- **Microsoft Word - Re-exam Question**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/nguyenthanhhuy_2230926743815155/files/3019277314987759.pdf`  keywords: none
+- **Microsoft Word - Redemittel fÃ¼r Teil 3**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/archived_threads/vgudeutschclub_1970364176393471/files/2024654460903110.pdf`  keywords: none
+- **MIT Erfolg Zu Telc Deutsch B2 - Zertifikat Deutsch Plus Testbuch (German Edition) (Hans-Jürgen Hantschel, Verena Klotz etc.) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/MIT Erfolg Zu Telc Deutsch B2 - Zertifikat Deutsch Plus Testbuch (German Edition) (Hans-Jürgen Hantschel, Verena Klotz etc.) (Z-Library).pdf`  keywords: none
+- **Mit Erfolg Zu Telc Deutsch B2 - Zertifikat Deutsch Plus Übungsbuch (Hans-Jürgen Hantschel, Verena Klotz etc.) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/Mit Erfolg Zu Telc Deutsch B2 - Zertifikat Deutsch Plus Übungsbuch (Hans-Jürgen Hantschel, Verena Klotz etc.) (Z-Library).pdf`  keywords: none
+- **Mit Erfolg zu telc Deutsch B2 Testbuch ( etc.) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/Mit Erfolg zu telc Deutsch B2 Testbuch ( etc.) (Z-Library).pdf`  keywords: none
+- **Modern Vim**  (confidence: 0.050)  `/Users/longtran/Downloads/Modern Vim Craft Your Development Environment with Vim 8 and Neovim (Drew Neil) (Z-Library).pdf`  keywords: none
+- **Offer letter template**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/e2ee_cutover/huongphan_1659946430913192/files/365870645480370.pdf`  keywords: none
+- **Options, futures, and other derivatives (Hull John, Basu Sankarshan) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/Options, futures, and other derivatives (Hull John, Basu Sankarshan) (Z-Library).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (1).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (10).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (11).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (12).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (13).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (14).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (15).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (16).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (2).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (3).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (4).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (5).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (6).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (7).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (8).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01 (9).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Exam01.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/Programming_Pararrel_Team17_Submission/EXAM.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/Programming_Pararrel_Team17_Submission (1)/EXAM.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/Programming_Pararrel_Team17_Submission (2)/EXAM.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Exercise 1—OpenMP**  (confidence: 0.050)  `/Users/longtran/Downloads/pp_submit_jan21_new/EXAM.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 1**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture01.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 10**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture10.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 11**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture11 (1).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 11**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture11.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 12**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture12.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 2**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture02 (1).pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 2**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture02.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 3**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture03.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 4**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture04.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 5**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture05.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 6**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture06.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 7**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture07.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 8**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture08.pdf`  keywords: none
+- **Parallel Programming, WT 25/26, Lecture 9**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture09.pdf`  keywords: none
+- **ParaProg_WT25_Lecture02 2**  (confidence: 0.050)  `/Users/longtran/Downloads/ParaProg_WT25_Lecture02 2.pdf`  keywords: none
+- **Peer Review Strategies and Checklist**  (confidence: 0.050)  `/Users/longtran/Downloads/Peer Review_Check Lists.pdf`  keywords: none
+- **Portfolio3**  (confidence: 0.050)  `/Users/longtran/Downloads/Portfolio3.pdf`  keywords: none
+- **PowerPoint-Präsentation**  (confidence: 0.050)  `/Users/longtran/Downloads/Feedback Meta Modeling.pdf`  keywords: none
+- **PowerPoint-Präsentation**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/studiumgeneral_4676988999007649/files/495297658778659.pdf`  keywords: none
+- **pp_report**  (confidence: 0.050)  `/Users/longtran/Downloads/Programming_Pararrel_Team17_Submission/reports/pp_report.pdf`  keywords: none
+- **pp_report**  (confidence: 0.050)  `/Users/longtran/Downloads/Programming_Pararrel_Team17_Submission (1)/reports/pp_report.pdf`  keywords: none
+- **pp_report**  (confidence: 0.050)  `/Users/longtran/Downloads/Programming_Pararrel_Team17_Submission (2)/reports/pp_report.pdf`  keywords: none
+- **pp_report**  (confidence: 0.050)  `/Users/longtran/Downloads/pp_report.pdf`  keywords: none
+- **pp_report**  (confidence: 0.050)  `/Users/longtran/Downloads/pp_submit_jan21_new/reports/pp_report.pdf`  keywords: none
+- **Practical Robotics in C++: Build and Program Real Autonomous Robots Using Raspberry Pi**  (confidence: 0.050)  `/Users/longtran/Downloads/Practical Robotics in C++ (Lloyd Brombach) (Z-Library).pdf`  keywords: none
+- **Prit Dholariya_1607774_ICSW_809f8aac44d6f6f256038b3eb557b0d8**  (confidence: 0.050)  `/Users/longtran/Downloads/Prit Dholariya_1607774_ICSW_809f8aac44d6f6f256038b3eb557b0d8.pdf`  keywords: none
+- **Prit Dholariya_1607774_ICSW_Task_2_9b8e937e1ce6a18d797d4fe2b40e1df1**  (confidence: 0.050)  `/Users/longtran/Downloads/Prit Dholariya_1607774_ICSW_Task_2_9b8e937e1ce6a18d797d4fe2b40e1df1.pdf`  keywords: none
+- **Programming Paradigms - Types**  (confidence: 0.050)  `/Users/longtran/Downloads/Week2_Types.pdf`  keywords: none
+- **Prometheus: Up & Running**  (confidence: 0.050)  `/Users/longtran/Downloads/Prometheus Up  Running (Julien Pivotto, Brian Brazil) (Z-Library).pdf`  keywords: none
+- **Prufungstraining Goethe-Zertifikat B2 (Goethe Institute) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/Prufungstraining Goethe-Zertifikat B2 (Goethe Institute) (Z-Library).pdf`  keywords: none
+- **Reconfigurable Computing - AMD / Xilinx Toolchain: Vitis HLS**  (confidence: 0.050)  `/Users/longtran/Downloads/09_xilinx_toolchain (1).pdf`  keywords: none
+- **Reconfigurable Computing - AMD / Xilinx Toolchain: Vitis HLS**  (confidence: 0.050)  `/Users/longtran/Downloads/09_xilinx_toolchain (2).pdf`  keywords: none
+- **Reconfigurable Computing - AMD / Xilinx Toolchain: Vitis HLS**  (confidence: 0.050)  `/Users/longtran/Downloads/09_xilinx_toolchain (3).pdf`  keywords: none
+- **Reconfigurable Computing - AMD / Xilinx Toolchain: Vitis HLS**  (confidence: 0.050)  `/Users/longtran/Downloads/09_xilinx_toolchain (4).pdf`  keywords: none
+- **Reconfigurable Computing - AMD / Xilinx Toolchain: Vitis HLS**  (confidence: 0.050)  `/Users/longtran/Downloads/09_xilinx_toolchain.pdf`  keywords: none
+- **Reconfigurable Computing - Hardware/Software Codesign I(Heuristic Partitioning)**  (confidence: 0.050)  `/Users/longtran/Downloads/04_hw_sw_codesign1.pdf`  keywords: none
+- **Reconfigurable Computing - High-Level Synthesis & Scheduling Part I**  (confidence: 0.050)  `/Users/longtran/Downloads/06_hls_sched1 (1).pdf`  keywords: none
+- **Reconfigurable Computing - High-Level Synthesis & Scheduling Part I**  (confidence: 0.050)  `/Users/longtran/Downloads/06_hls_sched1.pdf`  keywords: none
+- **Reconfigurable Computing - Integer Linear Programming (ILP) Hardware/Software Codesign II (Optimal Partitioning)**  (confidence: 0.050)  `/Users/longtran/Downloads/05_hw_sw_codesign2.pdf`  keywords: none
+- **Reconfigurable Computing - Logic Synthesis**  (confidence: 0.050)  `/Users/longtran/Downloads/10_logic_synthesis (1).pdf`  keywords: none
+- **Reconfigurable Computing - Logic Synthesis**  (confidence: 0.050)  `/Users/longtran/Downloads/10_logic_synthesis.pdf`  keywords: none
+- **Reconfigurable Computing - Reconfigurable Computing Systems**  (confidence: 0.050)  `/Users/longtran/Downloads/03_reconfigurable_computing_systems (1).pdf`  keywords: none
+- **Reconfigurable Computing - Reconfigurable Computing Systems**  (confidence: 0.050)  `/Users/longtran/Downloads/03_reconfigurable_computing_systems.pdf`  keywords: none
+- **Reconfigurable Computing - Scheduling Part II (Optimal and Modulo Scheduling)**  (confidence: 0.050)  `/Users/longtran/Downloads/07_sched2.pdf`  keywords: none
+- **Reconfigurable Computing - Wrap-up**  (confidence: 0.050)  `/Users/longtran/Downloads/11_wrapup (1).pdf`  keywords: none
+- **Reconfigurable Computing - Wrap-up**  (confidence: 0.050)  `/Users/longtran/Downloads/11_wrapup (2).pdf`  keywords: none
+- **Reconfigurable Computing - Wrap-up**  (confidence: 0.050)  `/Users/longtran/Downloads/11_wrapup.pdf`  keywords: none
+- **Running the cloudera VM image on Apple Silicon**  (confidence: 0.050)  `/Users/longtran/Downloads/Running the cloudera VM image on Apple Silicon (1).pdf`  keywords: none
+- **Running the cloudera VM image on Apple Silicon**  (confidence: 0.050)  `/Users/longtran/Downloads/Running the cloudera VM image on Apple Silicon (2).pdf`  keywords: none
+- **Running the cloudera VM image on Apple Silicon**  (confidence: 0.050)  `/Users/longtran/Downloads/Running the cloudera VM image on Apple Silicon.pdf`  keywords: none
+- **Screenshot 2025-05-05 at 23.59.47**  (confidence: 0.050)  `/Users/longtran/Downloads/Screenshot 2025-05-05 at 23.59.47.pdf`  keywords: none
+- **Screenshot 2025-05-06 at 00.04.05**  (confidence: 0.050)  `/Users/longtran/Downloads/Screenshot 2025-05-06 at 00.04.05.pdf`  keywords: none
+- **Screenshot 2026-03-02 at 21.19.45**  (confidence: 0.050)  `/Users/longtran/Downloads/Screenshot 2026-03-02 at 21.19.45.pdf`  keywords: none
+- **Self declaration of the utilization of AI tools**  (confidence: 0.050)  `/Users/longtran/Downloads/Self declaration of the utilization of AI tools.pdf`  keywords: none
+- **Standee**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lethi_2253243884912610/files/1953610314686410.pdf`  keywords: none
+- **Standee**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lethi_2253243884912610/files/2045877195495907.pdf`  keywords: none
+- **Standee**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lethi_2253243884912610/files/519395011913878.pdf`  keywords: none
+- **Standee**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/lethi_2253243884912610/files/796070164066020.pdf`  keywords: none
+- **Studienbescheinigung Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda (1).pdf`  keywords: none
+- **Studienbescheinigung Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda (2).pdf`  keywords: none
+- **Studienbescheinigung Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda (3).pdf`  keywords: none
+- **Studienbescheinigung Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda (4).pdf`  keywords: none
+- **Studienbescheinigung Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda (5).pdf`  keywords: none
+- **Studienbescheinigung Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda.pdf`  keywords: none
+- **Studienbescheinigung Fulda englisch**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda englisch (1).pdf`  keywords: none
+- **Studienbescheinigung Fulda englisch**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda englisch (2).pdf`  keywords: none
+- **Studienbescheinigung Fulda englisch**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda englisch (3).pdf`  keywords: none
+- **Studienbescheinigung Fulda englisch**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda englisch (4).pdf`  keywords: none
+- **Studienbescheinigung Fulda englisch**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienbescheinigung Fulda englisch.pdf`  keywords: none
+- **Studiengangsbeschreibung Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studiengangsbeschreibung Fulda (1).pdf`  keywords: none
+- **Studiengangsbeschreibung Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studiengangsbeschreibung Fulda.pdf`  keywords: none
+- **Studiengangsbeschreibung Fulda englisch**  (confidence: 0.050)  `/Users/longtran/Downloads/Studiengangsbeschreibung Fulda englisch.pdf`  keywords: none
+- **Studienverlauf Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienverlauf Fulda (1).pdf`  keywords: none
+- **Studienverlauf Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienverlauf Fulda (2).pdf`  keywords: none
+- **Studienverlauf Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienverlauf Fulda (3).pdf`  keywords: none
+- **Studienverlauf Fulda**  (confidence: 0.050)  `/Users/longtran/Downloads/Studienverlauf Fulda.pdf`  keywords: none
+- **telc Deutsch C1, Übungstest 3 (Modifiziertes Format 2016) (unknown) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/telc Deutsch C1, Übungstest 3 (Modifiziertes Format 2016) (unknown) (Z-Library).pdf`  keywords: none
+- **telc Deutsch C1, Übungstest Version 2, Prüfungsvorbereitung (unknown) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/telc Deutsch C1, Übungstest Version 2, Prüfungsvorbereitung (unknown) (Z-Library).pdf`  keywords: none
+- **Telc Language Tests  Übungstest 1 Deutsch C 1, Prüfungsvorbereitung (Harald Schmidt) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/Telc Language Tests  Übungstest 1 Deutsch C 1, Prüfungsvorbereitung (Harald Schmidt) (Z-Library).pdf`  keywords: none
+- **TOCCMF01_0131739697.QXD**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/_weeboo_1854817494554035/files/2024008444401315.pdf`  keywords: none
+- **Tran phan phuc Long**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/_weeboo_1854817494554035/files/2362829383848853.pdf`  keywords: none
+- **Tran phan phuc Long**  (confidence: 0.050)  `/Users/longtran/Downloads/facebook-siristran-2025-10-08-BE7XyM2P/your_facebook_activity/messages/inbox/vietkhanh_1750989061803687/files/2407452556219397.pdf`  keywords: none
+- **Unified Modeling Language, v2.5.1**  (confidence: 0.050)  `/Users/longtran/Downloads/formal-17-12-05 (1).pdf`  keywords: none
+- **Unified Modeling Language, v2.5.1**  (confidence: 0.050)  `/Users/longtran/Downloads/formal-17-12-05.pdf`  keywords: none
+- **Untitled**  (confidence: 0.050)  `/Users/longtran/Downloads/AvgWordLengthDriver.pdf`  keywords: none
+- **Untitled**  (confidence: 0.050)  `/Users/longtran/Downloads/CombinerDriver.pdf`  keywords: none
+- **Untitled**  (confidence: 0.050)  `/Users/longtran/Downloads/LogProcess.pdf`  keywords: none
+- **Untitled**  (confidence: 0.050)  `/Users/longtran/Downloads/ToolsRunnerDriver.pdf`  keywords: none
+- **Untitled 2**  (confidence: 0.050)  `/Users/longtran/Downloads/LabReport (1)/LabReport.pdf`  keywords: none
+- **Untitled 2**  (confidence: 0.050)  `/Users/longtran/Downloads/LabReport.pdf`  keywords: none
+- **Untitled document**  (confidence: 0.050)  `/Users/longtran/Downloads/HOMEWORK LAB PART I (1).pdf`  keywords: none
+- **Untitled document**  (confidence: 0.050)  `/Users/longtran/Downloads/HOMEWORK LAB PART I (2).pdf`  keywords: none
+- **Untitled document**  (confidence: 0.050)  `/Users/longtran/Downloads/HOMEWORK LAB PART I (3).pdf`  keywords: none
+- **Untitled document**  (confidence: 0.050)  `/Users/longtran/Downloads/HOMEWORK LAB PART I.pdf`  keywords: none
+- **Übungsgrammatik Für Die Mittelstufe. Lösungsheft  Erweiterte Fassung (Friedrich Clamer, Erhard G Heilmann etc.) (Z-Library)**  (confidence: 0.050)  `/Users/longtran/Downloads/Übungsgrammatik Für Die Mittelstufe. Lösungsheft  Erweiterte Fassung (Friedrich Clamer, Erhard G Heilmann etc.) (Z-Library).pdf`  keywords: none
+- **Visumsbeantragung Internationale**  (confidence: 0.050)  `/Users/longtran/Downloads/Visumsbeantragung Internationale (1).pdf`  keywords: none
+- **Visumsbeantragung Internationale**  (confidence: 0.050)  `/Users/longtran/Downloads/Visumsbeantragung Internationale (2).pdf`  keywords: none
+- **Visumsbeantragung Internationale**  (confidence: 0.050)  `/Users/longtran/Downloads/Visumsbeantragung Internationale.pdf`  keywords: none
+- **VM_Mac_Cut&Paste**  (confidence: 0.050)  `/Users/longtran/Downloads/VM_Mac_CutPaste (1).pdf`  keywords: none
+- **VM_Mac_Cut&Paste**  (confidence: 0.050)  `/Users/longtran/Downloads/VM_Mac_CutPaste (2).pdf`  keywords: none
+- **VM_Mac_Cut&Paste**  (confidence: 0.050)  `/Users/longtran/Downloads/VM_Mac_CutPaste (3).pdf`  keywords: none
+- **VM_Mac_Cut&Paste**  (confidence: 0.050)  `/Users/longtran/Downloads/VM_Mac_CutPaste.pdf`  keywords: none
+- **Week 03 TOD Diagram**  (confidence: 0.050)  `/Users/longtran/Downloads/Week 03 TOD Diagram.pdf`  keywords: none
+- **Week 03 TOD Diagram (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/Week 03 TOD Diagram (1).pdf`  keywords: none
+- **Week 03 TOD Diagram (2)**  (confidence: 0.050)  `/Users/longtran/Downloads/Week 03 TOD Diagram (2).pdf`  keywords: none
+- **Week 03 TOD Diagram (3)**  (confidence: 0.050)  `/Users/longtran/Downloads/Week 03 TOD Diagram (3).pdf`  keywords: none
+- **Week2**  (confidence: 0.050)  `/Users/longtran/Downloads/Week2.pdf`  keywords: none
+- **Week2 (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/Week2 (1).pdf`  keywords: none
+- **Week2_Solution**  (confidence: 0.050)  `/Users/longtran/Downloads/Week2_Solution.pdf`  keywords: none
+- **Week3**  (confidence: 0.050)  `/Users/longtran/Downloads/Week3.pdf`  keywords: none
+- **Week4_Solution**  (confidence: 0.050)  `/Users/longtran/Downloads/Week4_Solution.pdf`  keywords: none
+- **Week4_Solution (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/Week4_Solution (1).pdf`  keywords: none
+- **Week4_Solution (2)**  (confidence: 0.050)  `/Users/longtran/Downloads/Week4_Solution (2).pdf`  keywords: none
+- **WhatsApp Image 2025-07-07 at 13.55.13 (3)**  (confidence: 0.050)  `/Users/longtran/Downloads/WhatsApp Image 2025-07-07 at 13.55.13 (3).pdf`  keywords: none
+- **WhatsApp Image 2026-02-25 at 17.12.45 (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/WhatsApp Image 2026-02-25 at 17.12.45 (1).pdf`  keywords: none
+- **WhatsApp Image 2026-02-25 at 17.12.45 (1) (1)**  (confidence: 0.050)  `/Users/longtran/Downloads/WhatsApp Image 2026-02-25 at 17.12.45 (1) (1).pdf`  keywords: none
+- **WhatsApp Image 2026-02-25 at 17.15.57**  (confidence: 0.050)  `/Users/longtran/Downloads/WhatsApp Image 2026-02-25 at 17.15.57.pdf`  keywords: none
