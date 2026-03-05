@@ -1,13 +1,13 @@
 # EBooksSorter
 
-Non-destructive technical PDF categorizer and index generator.
+Non-destructive technical PDF/EPUB categorizer and index generator.
 
 ## What it does
 
-- Scans a source folder recursively for `.pdf` files.
+- Scans a source folder recursively for `.pdf` and `.epub` files.
 - Infers one category per file from:
   - filename,
-  - PDF metadata (title/subject/keywords/author),
+  - PDF/EPUB metadata (title/subject/keywords/author where available),
   - extracted text from the first N pages.
 - Generates:
   - `output/books_by_category.md`
