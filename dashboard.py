@@ -429,17 +429,25 @@ def render_currently_reading_page(
         return
     helper_left, helper_right = st.columns([1, 3], vertical_alignment="center")
     with helper_left:
-        if st.button("Open NotebookLM", key="reading-open-notebooklm"):
+        st.markdown("**NotebookLM Upload**")
+        if st.button(
+            "📓 Open NotebookLM to Upload",
+            key="reading-open-notebooklm",
+            type="primary",
+            use_container_width=True,
+        ):
             ok, message = open_notebooklm_in_browser()
             if ok:
                 st.toast(message, icon="📓")
             else:
                 st.warning(message)
     with helper_right:
-        st.caption(
-            "NotebookLM manual upload flow: click 'Upload to NotebookLM' on a book card, then in NotebookLM use "
-            "'Add source' -> 'Upload' and pick the file from the opened folder. Limits are typically up to 200MB "
-            "or 500,000 words per source."
+        st.markdown(
+            "**NotebookLM manual upload flow**\n"
+            "- Click `📓 Open NotebookLM to Upload`\n"
+            "- Click `Open` on the book card to reveal the file location\n"
+            "- In NotebookLM: `Add source` -> `Upload`, then pick the file from that folder\n"
+            "- Limits are typically up to `200MB` or `500,000 words` per source"
         )
 
     safe_cols = max(1, cards_per_row)
@@ -474,7 +482,7 @@ def render_currently_reading_page(
                         save_currently_reading(reading_path, reading_items)
                         st.toast("Progress updated.", icon="📈")
 
-                    action_left, action_mid, action_right = st.columns(3)
+                    action_left, action_right = st.columns(2)
                     with action_left:
                         if st.button("Open", key=f"reading-open-{row_start}-{col_idx}-{book_id}"):
                             ok, message = open_pdf_in_file_manager(str(item.get("absolute_path", "")))
@@ -482,19 +490,6 @@ def render_currently_reading_page(
                                 st.toast(message, icon="📂")
                             else:
                                 st.warning(message)
-                    with action_mid:
-                        if st.button("Upload to NotebookLM", key=f"reading-upload-nlm-{row_start}-{col_idx}-{book_id}"):
-                            file_ok, file_message = open_pdf_in_file_manager(str(item.get("absolute_path", "")))
-                            browser_ok, browser_message = open_notebooklm_in_browser()
-                            if file_ok:
-                                st.toast(file_message, icon="📂")
-                            else:
-                                st.warning(file_message)
-                            if browser_ok:
-                                st.toast(browser_message, icon="📓")
-                            else:
-                                st.warning(browser_message)
-                            st.info("Next: in NotebookLM click Add source -> Upload, then choose this file from opened folder.")
                     with action_right:
                         if st.button("Remove", key=f"reading-remove-{row_start}-{col_idx}-{book_id}"):
                             if book_id:
