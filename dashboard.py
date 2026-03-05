@@ -36,6 +36,7 @@ DEFAULT_INDEX_DIR = Path("./output/semantic_index")
 DEFAULT_COVER_CACHE_DIR = Path("./output/covers")
 DEFAULT_READING_LIST_PATH = Path("./output/currently_reading.json")
 DEFAULT_DAILY_RECOMMENDATIONS_PATH = Path("./output/daily_recommendations.json")
+DEFAULT_CURRENT_READ_BOOKS_DIR = Path("./current-read-books")
 NOTEBOOKLM_URL = "https://notebooklm.google.com"
 
 
@@ -89,7 +90,47 @@ def make_reading_entry(item: dict) -> Dict[str, Any]:
         "absolute_path": item.get("absolute_path"),
         "added_at": _utc_now_iso(),
         "progress_pct": 0,
+        "reading_copy_path": "",
     }
+
+
+def _build_reading_copy_path(absolute_path: str, book_id: str) -> Path:
+    source = Path(absolute_path)
+    safe_book_id = (book_id or "").replace("/", "_").replace("\\", "_").replace(":", "_")
+    prefix = f"{safe_book_id}__" if safe_book_id else ""
+    return DEFAULT_CURRENT_READ_BOOKS_DIR / f"{prefix}{source.name}"
+
+
+def copy_book_to_current_read_folder(entry: Dict[str, Any]) -> Tuple[bool, str]:
+    source = Path(str(entry.get("absolute_path", ""))).expanduser()
+    if not source.exists() or not source.is_file():
+        return False, f"Source file not found: {source}"
+    copy_path = _build_reading_copy_path(str(source), str(entry.get("book_id", "")))
+    try:
+        copy_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, copy_path)
+        entry["reading_copy_path"] = str(copy_path)
+        return True, f"Copied to {copy_path}"
+    except Exception as exc:
+        return False, f"Could not copy book to current-read-books: {exc}"
+
+
+def remove_book_copy_from_current_read_folder(entry: Dict[str, Any]) -> Tuple[bool, str]:
+    stored = str(entry.get("reading_copy_path", "")).strip()
+    if stored:
+        copy_path = Path(stored).expanduser()
+    else:
+        copy_path = _build_reading_copy_path(
+            str(entry.get("absolute_path", "")),
+            str(entry.get("book_id", "")),
+        )
+    if not copy_path.exists():
+        return True, "No copied file to remove."
+    try:
+        copy_path.unlink()
+        return True, f"Removed copied file: {copy_path.name}"
+    except Exception as exc:
+        return False, f"Could not remove copied file: {exc}"
 
 
 @st.cache_data(show_spinner=False)
@@ -395,14 +436,22 @@ def render_result_grid(
                             if not book_id:
                                 st.warning("Book ID missing, cannot update reading list.")
                             elif is_reading:
-                                reading_items.pop(book_id, None)
+                                removed_entry = reading_items.pop(book_id, None)
+                                if isinstance(removed_entry, dict):
+                                    removed_ok, removed_message = remove_book_copy_from_current_read_folder(removed_entry)
+                                    if not removed_ok:
+                                        st.warning(removed_message)
                                 save_currently_reading(reading_path, reading_items)
                                 st.toast("Removed from currently reading.", icon="📕")
                                 st.rerun()
                             else:
-                                reading_items[book_id] = make_reading_entry(item)
+                                entry = make_reading_entry(item)
+                                copy_ok, copy_message = copy_book_to_current_read_folder(entry)
+                                reading_items[book_id] = entry
                                 save_currently_reading(reading_path, reading_items)
                                 st.toast("Added to currently reading.", icon="📘")
+                                if not copy_ok:
+                                    st.warning(copy_message)
                                 st.rerun()
 
 
@@ -493,7 +542,11 @@ def render_currently_reading_page(
                     with action_right:
                         if st.button("Remove", key=f"reading-remove-{row_start}-{col_idx}-{book_id}"):
                             if book_id:
-                                reading_items.pop(book_id, None)
+                                removed_entry = reading_items.pop(book_id, None)
+                                if isinstance(removed_entry, dict):
+                                    removed_ok, removed_message = remove_book_copy_from_current_read_folder(removed_entry)
+                                    if not removed_ok:
+                                        st.warning(removed_message)
                                 save_currently_reading(reading_path, reading_items)
                                 st.toast("Removed from currently reading.", icon="📕")
                                 st.rerun()
@@ -762,14 +815,22 @@ def render_daily_recommendations_page(
                             if not book_id:
                                 st.warning("Book ID missing, cannot update reading list.")
                             elif is_reading:
-                                reading_items.pop(book_id, None)
+                                removed_entry = reading_items.pop(book_id, None)
+                                if isinstance(removed_entry, dict):
+                                    removed_ok, removed_message = remove_book_copy_from_current_read_folder(removed_entry)
+                                    if not removed_ok:
+                                        st.warning(removed_message)
                                 save_currently_reading(reading_list_path, reading_items)
                                 st.toast("Removed from currently reading.", icon="📕")
                                 st.rerun()
                             else:
-                                reading_items[book_id] = make_reading_entry(item)
+                                entry = make_reading_entry(item)
+                                copy_ok, copy_message = copy_book_to_current_read_folder(entry)
+                                reading_items[book_id] = entry
                                 save_currently_reading(reading_list_path, reading_items)
                                 st.toast("Added to currently reading.", icon="📘")
+                                if not copy_ok:
+                                    st.warning(copy_message)
                                 st.rerun()
 
 
@@ -813,7 +874,7 @@ def main() -> None:
         explore_bonus=0.2,
     )
     view_page = st.sidebar.radio("Page", ["Currently Reading", "Search", "Daily Recommendations", "Library"], index=1)
-    reading_cards_per_row = st.sidebar.slider("Reading cards per row", min_value=1, max_value=6, value=4, step=1)
+    cards_per_row = st.sidebar.slider("Cards per row", min_value=1, max_value=6, value=4, step=1)
     try:
         service = load_service(index_dir)
     except Exception as exc:
@@ -835,7 +896,7 @@ def main() -> None:
             cover_cache_dir,
             reading_items,
             reading_list_path,
-            cards_per_row=reading_cards_per_row,
+            cards_per_row=cards_per_row,
         )
         return
 
@@ -870,7 +931,6 @@ def main() -> None:
         value=0.05,
         step=0.01,
     )
-    columns_per_row = st.sidebar.slider("Cards per row", min_value=1, max_value=6, value=4, step=1)
     items_per_page = st.sidebar.slider("Items per page", min_value=8, max_value=60, value=20, step=4)
     selected_formats: List[str] = st.sidebar.multiselect("Format", all_formats, default=all_formats)
     surface_epubs = st.sidebar.checkbox(
@@ -948,13 +1008,21 @@ def main() -> None:
             if st.button(read_label, key=f"details-reading-{book_id}"):
                 if book_id:
                     if is_reading:
-                        reading_items.pop(book_id, None)
+                        removed_entry = reading_items.pop(book_id, None)
+                        if isinstance(removed_entry, dict):
+                            removed_ok, removed_message = remove_book_copy_from_current_read_folder(removed_entry)
+                            if not removed_ok:
+                                st.warning(removed_message)
                         save_currently_reading(reading_list_path, reading_items)
                         st.toast("Removed from currently reading.", icon="📕")
                     else:
-                        reading_items[book_id] = make_reading_entry(book)
+                        entry = make_reading_entry(book)
+                        copy_ok, copy_message = copy_book_to_current_read_folder(entry)
+                        reading_items[book_id] = entry
                         save_currently_reading(reading_list_path, reading_items)
                         st.toast("Added to currently reading.", icon="📘")
+                        if not copy_ok:
+                            st.warning(copy_message)
                     st.rerun()
             if is_reading and book_id:
                 current_progress = coerce_progress(reading_items.get(book_id, {}).get("progress_pct", 0))
@@ -1012,7 +1080,7 @@ def main() -> None:
         render_result_grid(
             paged_results,
             cover_cache_dir=cover_cache_dir,
-            columns_per_row=columns_per_row,
+            columns_per_row=cards_per_row,
             button_key_prefix=f"result-page-{st.session_state['current_page']}",
             reading_items=reading_items,
             reading_path=reading_list_path,
