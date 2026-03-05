@@ -1,4 +1,4 @@
-# EBooksSorter
+# Semantic-Book-Recommender
 
 Non-destructive technical PDF/EPUB categorizer and index generator.
 
