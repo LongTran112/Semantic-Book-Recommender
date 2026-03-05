@@ -7,6 +7,7 @@ from datetime import date
 from datetime import datetime, timezone
 import hashlib
 import html
+from io import BytesIO
 import json
 import platform
 import shutil
@@ -21,6 +22,10 @@ try:
     import pypdfium2 as pdfium
 except ImportError:  # pragma: no cover - optional runtime dependency
     pdfium = None
+try:
+    from ebooklib import epub
+except ImportError:  # pragma: no cover - optional runtime dependency
+    epub = None
 
 from semantic_books.learning_mode import learning_mode_labels
 from semantic_books.daily_recommend import DailyBookRecommender, DailyRecommendationWeights
@@ -104,38 +109,111 @@ def get_file_dates(file_path: str) -> Tuple[Optional[date], Optional[date]]:
 
 
 @st.cache_data(show_spinner=False)
-def build_cover_thumbnail(pdf_path: str, cache_dir: str, max_width: int = 260) -> Optional[str]:
-    if pdfium is None:
+def build_cover_thumbnail(source_path: str, cache_dir: str, max_width: int = 260) -> Optional[str]:
+    source = Path(source_path)
+    if not source.exists():
         return None
-    source = Path(pdf_path)
-    if not source.exists() or source.suffix.lower() != ".pdf":
+
+    suffix = source.suffix.lower()
+    if suffix not in {".pdf", ".epub"}:
         return None
 
     cover_dir = Path(cache_dir)
     cover_dir.mkdir(parents=True, exist_ok=True)
-    cache_key = hashlib.sha1(source.as_posix().encode("utf-8")).hexdigest()[:16]
+    try:
+        mtime_key = str(int(source.stat().st_mtime))
+    except Exception:
+        mtime_key = "0"
+    cache_key = hashlib.sha1(
+        f"{source.as_posix()}::{suffix}::{mtime_key}::{max_width}".encode("utf-8")
+    ).hexdigest()[:16]
     cover_path = cover_dir / f"{cache_key}.jpg"
     if cover_path.exists():
         return str(cover_path)
 
+    if suffix == ".pdf":
+        return _build_pdf_cover_thumbnail(source, cover_path, max_width=max_width)
+    if suffix == ".epub":
+        return _build_epub_cover_thumbnail(source, cover_path, max_width=max_width)
+    return None
+
+
+def _fit_cover_to_canvas(image: Image.Image, cover_path: Path) -> str:
+    target_width = 300
+    target_height = 420
+    fitted = image.copy()
+    fitted.thumbnail((target_width, target_height), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGB", (target_width, target_height), color=(245, 245, 245))
+    paste_x = (target_width - fitted.width) // 2
+    paste_y = (target_height - fitted.height) // 2
+    canvas.paste(fitted, (paste_x, paste_y))
+    canvas.save(cover_path, format="JPEG", quality=84)
+    return str(cover_path)
+
+
+def _build_pdf_cover_thumbnail(source: Path, cover_path: Path, max_width: int) -> Optional[str]:
+    if pdfium is None:
+        return None
     try:
         pdf = pdfium.PdfDocument(str(source))
         page = pdf[0]
         page_width = page.get_width() or max_width
         scale = max(max_width / float(page_width), 0.1)
         image = page.render(scale=scale).to_pil().convert("RGB")
+        return _fit_cover_to_canvas(image, cover_path)
+    except Exception:
+        return None
 
-        # Normalize to a fixed card cover size so all grid cards align.
-        target_width = 300
-        target_height = 420
-        fitted = image.copy()
-        fitted.thumbnail((target_width, target_height), Image.Resampling.LANCZOS)
-        canvas = Image.new("RGB", (target_width, target_height), color=(245, 245, 245))
-        paste_x = (target_width - fitted.width) // 2
-        paste_y = (target_height - fitted.height) // 2
-        canvas.paste(fitted, (paste_x, paste_y))
-        canvas.save(cover_path, format="JPEG", quality=84)
-        return str(cover_path)
+
+def _build_epub_cover_thumbnail(source: Path, cover_path: Path, max_width: int) -> Optional[str]:
+    if epub is None:
+        return None
+    try:
+        book = epub.read_epub(str(source))
+    except Exception:
+        return None
+
+    cover_bytes: Optional[bytes] = None
+    try:
+        for cover_id, _ in book.get_metadata("OPF", "cover"):
+            item = book.get_item_with_id(str(cover_id))
+            if item is not None and hasattr(item, "get_content"):
+                payload = item.get_content()
+                if isinstance(payload, bytes) and payload:
+                    cover_bytes = payload
+                    break
+    except Exception:
+        cover_bytes = None
+
+    if not cover_bytes:
+        image_items = []
+        for item in book.get_items():
+            media_type = str(getattr(item, "media_type", "")).lower()
+            if media_type.startswith("image/"):
+                image_items.append(item)
+
+        preferred = [it for it in image_items if "cover" in str(getattr(it, "file_name", "")).lower()]
+        candidates = preferred if preferred else image_items
+        for item in candidates:
+            try:
+                payload = item.get_content()
+            except Exception:
+                continue
+            if isinstance(payload, bytes) and payload:
+                cover_bytes = payload
+                break
+
+    if not cover_bytes:
+        return None
+
+    try:
+        image = Image.open(BytesIO(cover_bytes)).convert("RGB")
+        if image.width > 0:
+            scale = max(max_width / float(image.width), 0.1)
+            resized = image.resize((max(1, int(image.width * scale)), max(1, int(image.height * scale))))
+        else:
+            resized = image
+        return _fit_cover_to_canvas(resized, cover_path)
     except Exception:
         return None
 
@@ -203,6 +281,29 @@ def build_book_summary(book: dict) -> str:
     )
 
 
+def get_book_format(item: Dict[str, Any]) -> str:
+    path = Path(str(item.get("absolute_path", "")))
+    return (path.suffix.lower().lstrip(".") or "unknown").upper()
+
+
+def blend_results_to_surface_epubs(items: List[Dict[str, Any]], top_k: int) -> List[Dict[str, Any]]:
+    if not items:
+        return items
+    target = len(items) if top_k <= 0 else max(1, top_k)
+    epubs = [item for item in items if get_book_format(item) == "EPUB"]
+    non_epubs = [item for item in items if get_book_format(item) != "EPUB"]
+    if not epubs or target <= 2:
+        return items[:target]
+
+    # Reserve a small portion so EPUB entries are visible in the first page.
+    desired_epubs = min(len(epubs), max(2, target // 4))
+    picked_epubs = epubs[:desired_epubs]
+    picked_non_epubs = non_epubs[: max(0, target - desired_epubs)]
+    merged = picked_epubs + picked_non_epubs
+    merged.sort(key=lambda item: float(item.get("score", item.get("similarity", 0.0)) or 0.0), reverse=True)
+    return merged[:target]
+
+
 def open_pdf_in_file_manager(pdf_path: str) -> Tuple[bool, str]:
     path = Path(pdf_path).expanduser()
     if not path.exists():
@@ -256,9 +357,11 @@ def render_result_grid(
                     else:
                         st.caption("No cover preview")
                     title = html.escape(_card_title(item.get("title", "Untitled")))
+                    book_format = get_book_format(item)
                     meta = html.escape(
                         f"{item.get('category', 'Other')} | "
                         f"{item.get('learning_mode', 'unknown')} | "
+                        f"{book_format} | "
                         f"sim {item.get('similarity', 0.0):.3f}"
                     )
                     st.markdown(f"<div class='book-card-title'>{title}</div>", unsafe_allow_html=True)
@@ -302,10 +405,17 @@ def render_currently_reading_page(
         st.info("No books added yet. Use 'Mark Reading' from search or related books.")
         return
 
-    entries = sorted(
+    entries_all = sorted(
         reading_items.values(),
         key=lambda item: item.get("added_at", ""),
     )
+    all_formats = sorted({get_book_format(item) for item in entries_all} | {"PDF", "EPUB"})
+    selected_formats = st.multiselect("Format", all_formats, default=all_formats, key="reading-formats")
+    entries = [item for item in entries_all if not selected_formats or get_book_format(item) in set(selected_formats)]
+    if not entries:
+        st.info("No currently reading books match selected formats.")
+        return
+
     safe_cols = max(1, cards_per_row)
     for row_start in range(0, len(entries), safe_cols):
         row_items = entries[row_start : row_start + safe_cols]
@@ -321,6 +431,7 @@ def render_currently_reading_page(
                     st.caption(
                         f"{item.get('category', 'Other')} | "
                         f"{item.get('learning_mode', 'unknown')} | "
+                        f"{get_book_format(item)} | "
                         f"{days_reading(str(item.get('added_at', '')))} days"
                     )
                     st.caption(f"Progress: {coerce_progress(item.get('progress_pct', 0))}%")
@@ -384,21 +495,27 @@ def render_library_page(service: SemanticSearchService) -> None:
         return
 
     all_categories = sorted({str(item.get("category", "Other")) for item in items})
+    all_formats = sorted(
+        {
+            (Path(str(item.get("absolute_path", ""))).suffix.lower().lstrip(".") or "unknown").upper()
+            for item in items
+        }
+        | {"PDF", "EPUB"}
+    )
     name_filter = st.text_input("Filter by name", value="")
-    selected_categories = st.multiselect("Category", all_categories, default=all_categories)
+    st.sidebar.header("Library Filters")
+    selected_categories = st.sidebar.multiselect("Category", all_categories, default=all_categories)
+    selected_formats = st.sidebar.multiselect("Format", all_formats, default=all_formats)
 
     today = date.today()
-    col_created, col_updated = st.columns(2)
-    with col_created:
-        created_start, created_end = st.date_input(
-            "Created date range",
-            value=(date(2000, 1, 1), today),
-        )
-    with col_updated:
-        updated_start, updated_end = st.date_input(
-            "Updated date range",
-            value=(date(2000, 1, 1), today),
-        )
+    created_start, created_end = st.sidebar.date_input(
+        "Created date range",
+        value=(date(2000, 1, 1), today),
+    )
+    updated_start, updated_end = st.sidebar.date_input(
+        "Updated date range",
+        value=(date(2000, 1, 1), today),
+    )
 
     name_norm = name_filter.strip().lower()
     rows: List[Dict[str, Any]] = []
@@ -406,9 +523,16 @@ def render_library_page(service: SemanticSearchService) -> None:
         title = str(item.get("title", "Untitled"))
         category = str(item.get("category", "Other"))
         path = str(item.get("absolute_path", ""))
+        filename = Path(path).name
+        fmt = (Path(path).suffix.lower().lstrip(".") or "unknown").upper()
         if selected_categories and category not in selected_categories:
             continue
-        if name_norm and name_norm not in title.lower():
+        if selected_formats and fmt not in selected_formats:
+            continue
+        if name_norm and all(
+            name_norm not in text
+            for text in (title.lower(), filename.lower(), path.lower())
+        ):
             continue
 
         created_date, updated_date = get_file_dates(path)
@@ -422,6 +546,7 @@ def render_library_page(service: SemanticSearchService) -> None:
         rows.append(
             {
                 "Title": title,
+                "Format": fmt,
                 "Category": category,
                 "Created Date": created_date.isoformat(),
                 "Updated Date": updated_date.isoformat(),
@@ -503,7 +628,19 @@ def render_daily_recommendations_page(
     reading_list_path: Path,
     weights: DailyRecommendationWeights,
 ) -> None:
-    st.header("Today's 5 Recommendations")
+    st.header("Today's 18 Recommendations")
+    st.subheader("Daily Weights (Read-only)")
+    w_col1, w_col2, w_col3 = st.columns(3)
+    with w_col1:
+        st.text_input("Similarity weight", f"{weights.similarity:.2f}", disabled=True)
+        st.text_input("Novelty weight", f"{weights.novelty:.2f}", disabled=True)
+    with w_col2:
+        st.text_input("Freshness weight", f"{weights.freshness:.2f}", disabled=True)
+        st.text_input("Confidence weight", f"{weights.confidence:.2f}", disabled=True)
+    with w_col3:
+        st.text_input("Diversity penalty", f"{weights.diversity_penalty:.2f}", disabled=True)
+        st.text_input("Explore bonus", f"{weights.explore_bonus:.2f}", disabled=True)
+
     recommender = DailyBookRecommender(
         service=service,
         reading_list_path=reading_list_path,
@@ -515,67 +652,91 @@ def render_daily_recommendations_page(
     today = datetime.now().astimezone().date()
     recommendations = recommender.get_or_generate_for_date(
         target_date=today,
-        count=5,
+        count=18,
         force_refresh=refresh,
     )
+    all_formats = sorted({get_book_format(item) for item in recommendations} | {"PDF", "EPUB"})
+    selected_formats = st.multiselect(
+        "Format",
+        all_formats,
+        default=all_formats,
+        key="daily-formats",
+    )
+    surface_epubs = st.checkbox(
+        "Surface EPUB books in daily list",
+        value=True,
+        key="daily-surface-epubs",
+    )
+
+    if selected_formats:
+        allowed = set(selected_formats)
+        recommendations = [item for item in recommendations if get_book_format(item) in allowed]
+    if surface_epubs and (not selected_formats or "EPUB" in selected_formats):
+        recommendations = blend_results_to_surface_epubs(recommendations, top_k=18)
+
     st.caption(f"Date: {today.isoformat()} | History file: {DEFAULT_DAILY_RECOMMENDATIONS_PATH}")
     if not recommendations:
         st.info("No recommendations available right now.")
         return
 
-    cards = recommendations[:5]
-    row_cols = st.columns(5)
-    for idx, item in enumerate(cards):
-        with row_cols[idx]:
-            with st.container(border=True):
-                cover_path = build_cover_thumbnail(item.get("absolute_path", ""), cover_cache_dir)
-                if cover_path:
-                    st.image(cover_path, use_container_width=True)
-                else:
-                    st.caption("No cover preview")
-                st.markdown(f"#### {_card_title(item.get('title', 'Untitled'))}")
-                st.caption(
-                    f"{item.get('category', 'Other')} | "
-                    f"{item.get('learning_mode', 'unknown')} | "
-                    f"{item.get('daily_strategy', 'exploit')}"
-                )
-                st.caption(f"Daily score: {float(item.get('daily_score', 0.0) or 0.0):.3f}")
-                reasons = item.get("daily_reasons", {}) or {}
-                if isinstance(reasons, dict):
+    cards = recommendations[:18]
+    cards_per_row = 6
+    for row_start in range(0, len(cards), cards_per_row):
+        row_items = cards[row_start : row_start + cards_per_row]
+        row_cols = st.columns(cards_per_row)
+        for col_idx, item in enumerate(row_items):
+            card_idx = row_start + col_idx
+            with row_cols[col_idx]:
+                with st.container(border=True):
+                    cover_path = build_cover_thumbnail(item.get("absolute_path", ""), cover_cache_dir)
+                    if cover_path:
+                        st.image(cover_path, use_container_width=True)
+                    else:
+                        st.caption("No cover preview")
+                    st.markdown(f"#### {_card_title(item.get('title', 'Untitled'))}")
                     st.caption(
-                        "sim "
-                        f"{float(reasons.get('similarity', 0.0) or 0.0):.2f}, "
-                        "fresh "
-                        f"{float(reasons.get('freshness', 0.0) or 0.0):.2f}, "
-                        "novel "
-                        f"{float(reasons.get('novelty', 0.0) or 0.0):.2f}"
+                        f"{item.get('category', 'Other')} | "
+                        f"{item.get('learning_mode', 'unknown')} | "
+                        f"{get_book_format(item)} | "
+                        f"{item.get('daily_strategy', 'exploit')}"
                     )
+                    st.caption(f"Daily score: {float(item.get('daily_score', 0.0) or 0.0):.3f}")
+                    reasons = item.get("daily_reasons", {}) or {}
+                    if isinstance(reasons, dict):
+                        st.caption(
+                            "sim "
+                            f"{float(reasons.get('similarity', 0.0) or 0.0):.2f}, "
+                            "fresh "
+                            f"{float(reasons.get('freshness', 0.0) or 0.0):.2f}, "
+                            "novel "
+                            f"{float(reasons.get('novelty', 0.0) or 0.0):.2f}"
+                        )
 
-                btn_left, btn_right = st.columns(2)
-                with btn_left:
-                    if st.button("Open", key=f"daily-open-{idx}-{item.get('book_id')}"):
-                        ok, message = open_pdf_in_file_manager(item.get("absolute_path", ""))
-                        if ok:
-                            st.toast(message, icon="📂")
-                        else:
-                            st.warning(message)
-                with btn_right:
-                    book_id = str(item.get("book_id", ""))
-                    is_reading = book_id in reading_items
-                    label = "Remove" if is_reading else "Mark"
-                    if st.button(label, key=f"daily-reading-{idx}-{book_id}"):
-                        if not book_id:
-                            st.warning("Book ID missing, cannot update reading list.")
-                        elif is_reading:
-                            reading_items.pop(book_id, None)
-                            save_currently_reading(reading_list_path, reading_items)
-                            st.toast("Removed from currently reading.", icon="📕")
-                            st.rerun()
-                        else:
-                            reading_items[book_id] = make_reading_entry(item)
-                            save_currently_reading(reading_list_path, reading_items)
-                            st.toast("Added to currently reading.", icon="📘")
-                            st.rerun()
+                    btn_left, btn_right = st.columns(2)
+                    with btn_left:
+                        if st.button("Open", key=f"daily-open-{card_idx}-{item.get('book_id')}"):
+                            ok, message = open_pdf_in_file_manager(item.get("absolute_path", ""))
+                            if ok:
+                                st.toast(message, icon="📂")
+                            else:
+                                st.warning(message)
+                    with btn_right:
+                        book_id = str(item.get("book_id", ""))
+                        is_reading = book_id in reading_items
+                        label = "Remove" if is_reading else "Mark"
+                        if st.button(label, key=f"daily-reading-{card_idx}-{book_id}"):
+                            if not book_id:
+                                st.warning("Book ID missing, cannot update reading list.")
+                            elif is_reading:
+                                reading_items.pop(book_id, None)
+                                save_currently_reading(reading_list_path, reading_items)
+                                st.toast("Removed from currently reading.", icon="📕")
+                                st.rerun()
+                            else:
+                                reading_items[book_id] = make_reading_entry(item)
+                                save_currently_reading(reading_list_path, reading_items)
+                                st.toast("Added to currently reading.", icon="📘")
+                                st.rerun()
 
 
 def main() -> None:
@@ -609,22 +770,16 @@ def main() -> None:
     index_dir = str(DEFAULT_INDEX_DIR)
     cover_cache_dir = str(DEFAULT_COVER_CACHE_DIR)
     reading_list_path = DEFAULT_READING_LIST_PATH
+    daily_weights = DailyRecommendationWeights(
+        similarity=0.55,
+        freshness=0.2,
+        novelty=0.15,
+        confidence=0.1,
+        diversity_penalty=0.1,
+        explore_bonus=0.2,
+    )
     view_page = st.sidebar.radio("Page", ["Currently Reading", "Search", "Daily Recommendations", "Library"], index=1)
     reading_cards_per_row = st.sidebar.slider("Reading cards per row", min_value=1, max_value=6, value=4, step=1)
-    daily_weights = DailyRecommendationWeights(
-        similarity=st.sidebar.slider("Daily weight: similarity", min_value=0.0, max_value=1.0, value=0.55, step=0.05),
-        freshness=st.sidebar.slider("Daily weight: freshness", min_value=0.0, max_value=1.0, value=0.2, step=0.05),
-        novelty=st.sidebar.slider("Daily weight: novelty", min_value=0.0, max_value=1.0, value=0.15, step=0.05),
-        confidence=st.sidebar.slider("Daily weight: confidence", min_value=0.0, max_value=1.0, value=0.1, step=0.05),
-        diversity_penalty=st.sidebar.slider(
-            "Daily diversity penalty",
-            min_value=0.0,
-            max_value=0.5,
-            value=0.1,
-            step=0.05,
-        ),
-        explore_bonus=st.sidebar.slider("Daily explore bonus", min_value=0.0, max_value=1.0, value=0.2, step=0.05),
-    )
     try:
         service = load_service(index_dir)
     except Exception as exc:
@@ -636,6 +791,7 @@ def main() -> None:
 
     all_categories = sorted({item.get("category", "Other") for item in service.metadata})
     all_modes = list(learning_mode_labels().keys())
+    all_formats = sorted({get_book_format(item) for item in service.metadata} | {"PDF", "EPUB"})
     reading_items = load_currently_reading(reading_list_path)
 
     if view_page == "Currently Reading":
@@ -650,8 +806,8 @@ def main() -> None:
         return
 
     if view_page == "Library":
-        index_dir, cover_cache_dir, reading_list_path = render_locked_paths_sidebar()
         render_library_page(service)
+        index_dir, cover_cache_dir, reading_list_path = render_locked_paths_sidebar()
         return
 
     if view_page == "Daily Recommendations":
@@ -682,6 +838,12 @@ def main() -> None:
     )
     columns_per_row = st.sidebar.slider("Cards per row", min_value=1, max_value=6, value=4, step=1)
     items_per_page = st.sidebar.slider("Items per page", min_value=8, max_value=60, value=20, step=4)
+    selected_formats: List[str] = st.sidebar.multiselect("Format", all_formats, default=all_formats)
+    surface_epubs = st.sidebar.checkbox(
+        "Surface EPUB books in results",
+        value=True,
+        help="Ensure some EPUB books are visible near the top when available.",
+    )
     st.sidebar.header("Filters")
     selected_categories: List[str] = st.sidebar.multiselect("Category", all_categories, default=all_categories)
     selected_modes: List[str] = st.sidebar.multiselect(
@@ -710,11 +872,19 @@ def main() -> None:
             learning_modes=selected_modes or None,
             min_similarity=float(min_similarity),
         )
-        st.session_state["last_results"] = service.search_books(
+        results = service.search_books(
             query=query.strip(),
             filters=filters,
             top_k=top_k_effective,
         )
+        if selected_formats:
+            format_set = set(selected_formats)
+            results = [item for item in results if get_book_format(item) in format_set]
+        if surface_epubs and (not selected_formats or "EPUB" in selected_formats):
+            results = blend_results_to_surface_epubs(results, top_k=int(top_k_effective))
+        else:
+            results = results[: max(1, int(top_k_effective))]
+        st.session_state["last_results"] = results
         st.session_state["current_page"] = 1
         st.session_state["selected_book_id"] = None
 

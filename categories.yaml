@@ -7,7 +7,8 @@ category_order:
   - NLP
   - Fourier-Transformers
   - MachineLearning
-  - AI-LLM
+  - Ensemble-MachineLearning
+  - LLM
   - Generative-AI
   - Transformer-DeepLearning
   - Transfer-Learning
@@ -15,6 +16,12 @@ category_order:
   - CUDA
   - Parallel-Computing
   - Concurrency
+  - Robotics
+  - Arduino
+  - ESP32
+  - Raspberry-Pi
+  - Jetson-Nano
+  - IoT
   - Electronics
   - Circuit-Design-Analysis
   - Electrical-Engineering
@@ -44,6 +51,7 @@ category_order:
   - Databases
   - SQL
   - Advanced-SQL
+  - German-Language
   - Security
   - Other
 
@@ -126,7 +134,19 @@ categories:
     - scikit learn
     - feature engineering
     - model selection
-  AI-LLM:
+  Ensemble-MachineLearning:
+    - ensemble learning
+    - ensemble machine learning
+    - random forest
+    - gradient boosting
+    - xgboost
+    - lightgbm
+    - adaboost
+    - bagging
+    - stacking
+    - voting classifier
+    - blending
+  LLM:
     - large language model
     - llm
     - prompt engineering
@@ -210,6 +230,61 @@ categories:
     - lock free
     - race condition
     - deadlock
+  Robotics:
+    - robotics
+    - robot
+    - robot programming
+    - autonomous robot
+    - ros
+    - ros2
+    - robot operating system
+    - slam
+    - motion planning
+    - robot kinematics
+    - robot dynamics
+    - mobile robot
+    - manipulator
+    - mechatronics
+    - arduino robotics
+    - robot control
+  Arduino:
+    - arduino
+    - arduino uno
+    - arduino mega
+    - arduino nano
+    - arduino ide
+    - sketch
+    - teensy
+  ESP32:
+    - esp32
+    - esp32s3
+    - esp-idf
+    - esp idf
+    - espressif
+    - nodemcu
+    - esp8266
+  Raspberry-Pi:
+    - raspberry pi
+    - rasbery pi
+    - rpi
+    - pico
+    - pico w
+    - pi gpio
+    - raspbian
+  Jetson-Nano:
+    - jetson nano
+    - nvidia jetson
+    - jetpack
+    - cuda on jetson
+  IoT:
+    - iot
+    - internet of things
+    - edge device
+    - sensor network
+    - mqtt
+    - zigbee
+    - lorawan
+    - home automation
   Electronics:
     - electronics
     - electronic circuits
@@ -343,6 +418,9 @@ categories:
     - bare metal
     - fpga
     - micropython
+    - arduino
+    - teensy
+    - stm8
   Linux-SystemProgramming:
     - linux programming
     - system programming
@@ -367,6 +445,10 @@ categories:
     - clang
     - build systems
     - linker
+    - modern c++
+    - c++20
+    - c++ core guidelines
+    - move semantics
   System-Design:
     - system design
     - scalable systems
@@ -414,6 +496,9 @@ categories:
     - go concurrency
     - go modules
     - gopher
+    - build in go
+    - in go
+    - go mistakes
   Java:
     - java
     - jvm
@@ -492,6 +577,24 @@ categories:
     - analytic functions
     - window functions
     - sql performance tuning
+  German-Language:
+    - german language
+    - german
+    - deutsch
+    - deutsche
+    - deutschkurs
+    - goethe-zertifikat
+    - goethe zertifikat
+    - grammatik
+    - wortliste
+    - b1
+    - b2
+    - c1
+    - c2
+    - genitiv
+    - pronomen
+    - modalpartikel
+    - zukunft im präsens
   Security:
     - security
     - cryptography

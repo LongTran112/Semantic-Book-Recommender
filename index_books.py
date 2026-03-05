@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Categorize technical PDF books into a non-destructive index.
+"""Categorize technical books into a non-destructive index.
 
-This script scans a source directory recursively for PDF files, extracts signal
-from filename + PDF metadata + first pages of text, then assigns one category
-per file with a confidence score.
+This script scans a source directory recursively for PDF/EPUB files, extracts
+signal from filename + metadata + body text, then assigns one category per file
+with a confidence score.
 """
 
 from __future__ import annotations
@@ -25,6 +25,18 @@ try:
     from pypdf import PdfReader
 except ImportError:  # pragma: no cover - runtime dependency guard
     PdfReader = None
+
+try:
+    from ebooklib import ITEM_DOCUMENT
+    from ebooklib import epub
+except ImportError:  # pragma: no cover - optional runtime dependency
+    ITEM_DOCUMENT = None  # type: ignore[assignment]
+    epub = None
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:  # pragma: no cover - optional runtime dependency
+    BeautifulSoup = None
 
 try:
     import yaml
@@ -259,6 +271,25 @@ def compile_keyword_patterns(
 
 KEYWORD_PATTERNS: Dict[str, List[Tuple[str, re.Pattern[str]]]] = compile_keyword_patterns(KEYWORDS)
 
+# Force category assignment when title/filename contains explicit target phrases.
+# This runs before score-based matching to satisfy hard user intent.
+FORCE_NAME_CATEGORY_RULES: List[Tuple[str, List[str]]] = [
+    ("Ensemble-MachineLearning", ["ensemble"]),
+    ("AWS", [" aws ", "amazon web services"]),
+    ("Jetson-Nano", ["jetson nano"]),
+    ("Raspberry-Pi", ["raspberry pi", "rasbery pi"]),
+    ("ESP32", ["esp32"]),
+    ("STM32", ["stm32"]),
+    ("Arduino", ["arduino"]),
+    ("SQL", [" sql ", "structured query language"]),
+    ("System-Design", ["system design"]),
+    ("Generative-AI", ["generative ai"]),
+    ("Linux-SystemProgramming", ["system programming", "linux"]),
+    ("IoT", [" iot ", "internet of things"]),
+    ("Math-Calculus", ["calculus"]),
+    ("Math-Algebra", ["algebra"]),
+]
+
 
 def load_runtime_config(config_path: Optional[Path]) -> Tuple[List[str], Dict[str, float], Dict[str, List[str]]]:
     """Load category/keyword config from YAML file, falling back to defaults."""
@@ -396,25 +427,72 @@ def extract_pdf_signals(pdf_path: Path, max_pages: int) -> Tuple[str, str, str]:
     return title, metadata_text, " ".join(body_parts)
 
 
-def _extract_worker(pdf_path: str, max_pages: int, queue: "mp.Queue[Tuple[bool, Tuple[str, str, str] | str]]") -> None:
+def extract_epub_signals(epub_path: Path, max_docs: int) -> Tuple[str, str, str]:
+    """Return title, metadata text, and body text from an EPUB file."""
+    if epub is None or BeautifulSoup is None:
+        raise RuntimeError(
+            "Missing EPUB dependencies. Install with: "
+            "python3 -m pip install ebooklib beautifulsoup4"
+        )
+
+    book = epub.read_epub(str(epub_path))
+    title_values = book.get_metadata("DC", "title")
+    creator_values = book.get_metadata("DC", "creator")
+    subject_values = book.get_metadata("DC", "subject")
+    description_values = book.get_metadata("DC", "description")
+
+    title = str(title_values[0][0]).strip() if title_values else ""
+    metadata_parts: List[str] = []
+    for values in (title_values, creator_values, subject_values, description_values):
+        for value, _attrs in values:
+            if value:
+                metadata_parts.append(str(value))
+
+    body_parts: List[str] = []
+    docs_seen = 0
+    for item in book.get_items():
+        if ITEM_DOCUMENT is None or item.get_type() != ITEM_DOCUMENT:
+            continue
+        html_content = item.get_content()
+        soup = BeautifulSoup(html_content, "html.parser")
+        text = soup.get_text(" ", strip=True)
+        if text:
+            body_parts.append(text)
+            docs_seen += 1
+            if docs_seen >= max_docs:
+                break
+
+    metadata_text = " ".join(metadata_parts)
+    body_text = " ".join(body_parts)
+    return title, metadata_text, body_text
+
+
+def _extract_worker(book_path: str, max_pages: int, queue: "mp.Queue[Tuple[bool, Tuple[str, str, str] | str]]") -> None:
     try:
-        result = extract_pdf_signals(Path(pdf_path), max_pages=max_pages)
+        path = Path(book_path)
+        suffix = path.suffix.lower()
+        if suffix == ".pdf":
+            result = extract_pdf_signals(path, max_pages=max_pages)
+        elif suffix == ".epub":
+            result = extract_epub_signals(path, max_docs=max_pages)
+        else:
+            raise ValueError(f"Unsupported file type: {suffix}")
     except Exception as exc:  # pragma: no cover - worker process path
         queue.put((False, f"{type(exc).__name__}:{exc}"))
         return
     queue.put((True, result))
 
 
-def extract_pdf_signals_with_timeout(
-    pdf_path: Path,
+def extract_book_signals_with_timeout(
+    book_path: Path,
     max_pages: int,
     timeout_seconds: int,
 ) -> Tuple[str, str, str, str]:
-    """Extract text in a child process so bad PDFs cannot stall the full run."""
+    """Extract text in a child process so bad books cannot stall the full run."""
     queue: "mp.Queue[Tuple[bool, Tuple[str, str, str] | str]]" = mp.Queue(maxsize=1)
     process = mp.Process(
         target=_extract_worker,
-        args=(str(pdf_path), max_pages, queue),
+        args=(str(book_path), max_pages, queue),
         daemon=True,
     )
     process.start()
@@ -483,12 +561,23 @@ def score_categories(
     return best_category, confidence, sorted(set(matches[best_category]))
 
 
-def categorize_pdf(pdf_path: Path, max_pages: int, extract_timeout: int) -> BookRecord:
-    filename = pdf_path.name
-    filename_text = normalize(pdf_path.stem)
+def force_category_from_name(filename_text: str, title_text: str) -> Optional[Tuple[str, str]]:
+    haystack = f" {filename_text} {title_text} "
+    for category, phrases in FORCE_NAME_CATEGORY_RULES:
+        if category not in CATEGORY_ORDER:
+            continue
+        for phrase in phrases:
+            if phrase in haystack:
+                return category, phrase.strip()
+    return None
 
-    raw_title, raw_metadata, raw_body, error_hint = extract_pdf_signals_with_timeout(
-        pdf_path=pdf_path,
+
+def categorize_book(book_path: Path, max_pages: int, extract_timeout: int) -> BookRecord:
+    filename = book_path.name
+    filename_text = normalize(book_path.stem)
+
+    raw_title, raw_metadata, raw_body, error_hint = extract_book_signals_with_timeout(
+        book_path=book_path,
         max_pages=max_pages,
         timeout_seconds=extract_timeout,
     )
@@ -497,16 +586,21 @@ def categorize_pdf(pdf_path: Path, max_pages: int, extract_timeout: int) -> Book
     metadata_text = normalize(raw_metadata)
     body_text = normalize(raw_body)
 
-    category, confidence, matched = score_categories(
-        filename_text=filename_text,
-        title_text=title_text,
-        metadata_text=metadata_text,
-        body_text=body_text,
-    )
+    forced = force_category_from_name(filename_text=filename_text, title_text=title_text)
+    if forced is not None:
+        forced_category, forced_phrase = forced
+        category, confidence, matched = forced_category, 1.0, [f"forced_name:{forced_phrase}"]
+    else:
+        category, confidence, matched = score_categories(
+            filename_text=filename_text,
+            title_text=title_text,
+            metadata_text=metadata_text,
+            body_text=body_text,
+        )
     if error_hint:
         matched = matched + [error_hint]
 
-    title = raw_title.strip() or pdf_path.stem
+    title = raw_title.strip() or book_path.stem
     mode_source = " ".join([title, raw_metadata or "", raw_body[:6000] if raw_body else "", filename])
     learning_mode = infer_learning_mode(mode_source)
     return BookRecord(
@@ -514,25 +608,28 @@ def categorize_pdf(pdf_path: Path, max_pages: int, extract_timeout: int) -> Book
         confidence=confidence,
         title=title,
         filename=filename,
-        absolute_path=str(pdf_path.resolve()),
+        absolute_path=str(book_path.resolve()),
         matched_keywords=matched,
-        book_id=build_book_id(pdf_path),
+        book_id=build_book_id(book_path),
         metadata_text=raw_metadata.strip(),
         body_preview=(raw_body or "")[:12000],
         learning_mode=learning_mode,
     )
 
 
-def gather_pdfs(source_dir: Path) -> List[Path]:
-    return sorted(path for path in source_dir.rglob("*.pdf") if path.is_file())
+def gather_books(source_dir: Path) -> List[Path]:
+    books: List[Path] = []
+    for ext in ("*.pdf", "*.epub"):
+        books.extend(path for path in source_dir.rglob(ext) if path.is_file())
+    return sorted(books)
 
 
-def build_records(pdf_files: Sequence[Path], max_pages: int, extract_timeout: int) -> List[BookRecord]:
+def build_records(book_files: Sequence[Path], max_pages: int, extract_timeout: int) -> List[BookRecord]:
     records: List[BookRecord] = []
-    for idx, path in enumerate(pdf_files, start=1):
-        records.append(categorize_pdf(path, max_pages=max_pages, extract_timeout=extract_timeout))
-        if idx % 25 == 0 or idx == len(pdf_files):
-            print(f"Processed {idx}/{len(pdf_files)} PDFs...")
+    for idx, path in enumerate(book_files, start=1):
+        records.append(categorize_book(path, max_pages=max_pages, extract_timeout=extract_timeout))
+        if idx % 25 == 0 or idx == len(book_files):
+            print(f"Processed {idx}/{len(book_files)} books...")
     return sorted(records, key=lambda rec: (rec.category, -rec.confidence, rec.title.lower()))
 
 
@@ -708,7 +805,7 @@ def write_low_confidence_category_splits(
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Categorize technical PDF books.")
+    parser = argparse.ArgumentParser(description="Categorize technical PDF/EPUB books.")
     parser.add_argument(
         "--config",
         type=Path,
@@ -719,7 +816,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "--source",
         required=True,
         type=Path,
-        help="Source directory containing PDFs (searched recursively).",
+        help="Source directory containing PDFs/EPUBs (searched recursively).",
     )
     parser.add_argument(
         "--output-dir",
@@ -731,7 +828,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "--max-pages",
         type=int,
         default=8,
-        help="Max number of PDF pages to extract text from (default: 8).",
+        help="Max number of source pages/docs to extract text from (default: 8).",
     )
     parser.add_argument(
         "--extract-timeout",
@@ -797,12 +894,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"Source directory not found: {source_dir}", file=sys.stderr)
         return 1
 
-    pdf_files = gather_pdfs(source_dir)
-    if not pdf_files:
-        print(f"No PDF files found under: {source_dir}")
+    book_files = gather_books(source_dir)
+    if not book_files:
+        print(f"No PDF/EPUB files found under: {source_dir}")
         return 0
 
-    records = build_records(pdf_files, max_pages=max_pages, extract_timeout=extract_timeout)
+    records = build_records(book_files, max_pages=max_pages, extract_timeout=extract_timeout)
 
     csv_path = output_dir / "books_by_category.csv"
     md_path = output_dir / "books_by_category.md"
@@ -828,7 +925,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 f"{category_dir.resolve()}"
             )
 
-    print(f"Scanned {len(pdf_files)} PDFs from: {source_dir}")
+    print(f"Scanned {len(book_files)} books from: {source_dir}")
     print(f"Wrote CSV: {csv_path.resolve()}")
     print(f"Wrote MD : {md_path.resolve()}")
     print(f"Wrote semantic source JSONL: {semantic_source_path.resolve()}")

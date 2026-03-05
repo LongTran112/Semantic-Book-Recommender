@@ -4,3 +4,5 @@ numpy
 sentence-transformers
 streamlit
 pypdfium2
+ebooklib
+beautifulsoup4
