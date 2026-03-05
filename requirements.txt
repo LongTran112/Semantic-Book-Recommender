@@ -6,3 +6,4 @@ streamlit
 pypdfium2
 ebooklib
 beautifulsoup4
+plotly

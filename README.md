@@ -169,6 +169,22 @@ Dashboard features:
 - Book cover thumbnails (first-page preview, cached locally)
 - Book detail view with related book recommendations
 - Ask Books (RAG) page for grounded Q&A with citations from local chunks
+- Relationship Graph page (Obsidian-style) with whole-library and focused graph modes
+
+## Relationship Graph Page
+
+Use `Relationship Graph` in the dashboard sidebar to visualize semantic links between books.
+
+- **Whole Library mode**: builds a global graph from semantic similarity.
+- **Focused mode**: starts from a query and/or seed book, then expands neighbors.
+- **Interactive controls**: max nodes, minimum edge similarity, neighbors per node, and color by category or theory/practical.
+- **Node actions**: click a node, then open file location or mark/remove from currently reading.
+
+For large libraries, keep the graph responsive with:
+
+- lower `Max nodes` (for example 120-250)
+- higher `Minimum edge similarity` (for example 0.30-0.45)
+- lower `Neighbors per node` (for example 4-8)
 
 ## End-to-End Validation Checklist
 
@@ -179,10 +195,12 @@ Dashboard features:
 5. Apply category + theory/practical filters and confirm result updates.
 6. Open a book detail and check related books are shown.
 7. Open Ask Books (RAG), ask a question, and confirm citation snippets are returned.
+8. Open Relationship Graph and confirm node selection + actions work.
 
 ## Troubleshooting
 
 - **First embedding run is slow**: sentence-transformers downloads the model on first use.
 - **Dashboard cannot load index**: rerun indexing and semantic build commands, then verify files in `output/semantic_index/`.
 - **Ask Books (RAG) cannot load**: build chunk index and verify files in `output/semantic_index_chunks/`.
+- **Relationship graph is dense/slow**: reduce max nodes, increase min edge similarity, or lower neighbors per node.
 - **No relevant results**: lower the similarity threshold in the dashboard sidebar.
