@@ -12,6 +12,7 @@ import json
 import platform
 import shutil
 import subprocess
+import webbrowser
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -35,6 +36,7 @@ DEFAULT_INDEX_DIR = Path("./output/semantic_index")
 DEFAULT_COVER_CACHE_DIR = Path("./output/covers")
 DEFAULT_READING_LIST_PATH = Path("./output/currently_reading.json")
 DEFAULT_DAILY_RECOMMENDATIONS_PATH = Path("./output/daily_recommendations.json")
+NOTEBOOKLM_URL = "https://notebooklm.google.com"
 
 
 @st.cache_resource
@@ -334,6 +336,16 @@ def open_pdf_in_file_manager(pdf_path: str) -> Tuple[bool, str]:
         return False, f"Could not open file location: {exc}"
 
 
+def open_notebooklm_in_browser() -> Tuple[bool, str]:
+    try:
+        opened = webbrowser.open_new_tab(NOTEBOOKLM_URL)
+        if opened:
+            return True, "Opened NotebookLM."
+        return False, f"Could not open browser tab for {NOTEBOOKLM_URL}"
+    except Exception as exc:
+        return False, f"Could not open NotebookLM: {exc}"
+
+
 def render_result_grid(
     items: List[dict],
     cover_cache_dir: str,
@@ -415,6 +427,20 @@ def render_currently_reading_page(
     if not entries:
         st.info("No currently reading books match selected formats.")
         return
+    helper_left, helper_right = st.columns([1, 3], vertical_alignment="center")
+    with helper_left:
+        if st.button("Open NotebookLM", key="reading-open-notebooklm"):
+            ok, message = open_notebooklm_in_browser()
+            if ok:
+                st.toast(message, icon="📓")
+            else:
+                st.warning(message)
+    with helper_right:
+        st.caption(
+            "NotebookLM manual upload flow: click 'Upload to NotebookLM' on a book card, then in NotebookLM use "
+            "'Add source' -> 'Upload' and pick the file from the opened folder. Limits are typically up to 200MB "
+            "or 500,000 words per source."
+        )
 
     safe_cols = max(1, cards_per_row)
     for row_start in range(0, len(entries), safe_cols):
@@ -448,7 +474,7 @@ def render_currently_reading_page(
                         save_currently_reading(reading_path, reading_items)
                         st.toast("Progress updated.", icon="📈")
 
-                    action_left, action_right = st.columns(2)
+                    action_left, action_mid, action_right = st.columns(3)
                     with action_left:
                         if st.button("Open", key=f"reading-open-{row_start}-{col_idx}-{book_id}"):
                             ok, message = open_pdf_in_file_manager(str(item.get("absolute_path", "")))
@@ -456,6 +482,19 @@ def render_currently_reading_page(
                                 st.toast(message, icon="📂")
                             else:
                                 st.warning(message)
+                    with action_mid:
+                        if st.button("Upload to NotebookLM", key=f"reading-upload-nlm-{row_start}-{col_idx}-{book_id}"):
+                            file_ok, file_message = open_pdf_in_file_manager(str(item.get("absolute_path", "")))
+                            browser_ok, browser_message = open_notebooklm_in_browser()
+                            if file_ok:
+                                st.toast(file_message, icon="📂")
+                            else:
+                                st.warning(file_message)
+                            if browser_ok:
+                                st.toast(browser_message, icon="📓")
+                            else:
+                                st.warning(browser_message)
+                            st.info("Next: in NotebookLM click Add source -> Upload, then choose this file from opened folder.")
                     with action_right:
                         if st.button("Remove", key=f"reading-remove-{row_start}-{col_idx}-{book_id}"):
                             if book_id:
