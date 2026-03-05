@@ -37,6 +37,7 @@ python3 -m pip install -r requirements.txt
 
 The run above now also writes `output/semantic_source.jsonl`, which is used for
 semantic search and recommendation.
+It also writes `output/semantic_chunks.jsonl`, which is used for local RAG Q&A.
 
 Generate a review file for uncertain classifications:
 
@@ -83,6 +84,20 @@ Semantic source JSONL (`output/semantic_source.jsonl`) fields:
 - `metadata_text`
 - `body_preview`
 
+Semantic chunks JSONL (`output/semantic_chunks.jsonl`) fields:
+
+- `chunk_id`
+- `book_id`
+- `title`
+- `category`
+- `learning_mode`
+- `absolute_path`
+- `source_type`
+- `source_index`
+- `start_char`
+- `end_char`
+- `chunk_text`
+
 Low-confidence review CSV (`output/low_confidence_review.csv`) columns:
 
 - `confidence_threshold`
@@ -123,6 +138,23 @@ Generated artifacts:
 - `output/semantic_index/metadata.json`
 - `output/semantic_index/model_info.json`
 
+## Build Chunk Index for Local RAG
+
+Build chunk embeddings from `output/semantic_chunks.jsonl`:
+
+```bash
+.venv/bin/python build_semantic_index.py \
+  --semantic-source "./output/semantic_chunks.jsonl" \
+  --output-dir "./output/semantic_index_chunks" \
+  --model "sentence-transformers/all-MiniLM-L6-v2"
+```
+
+Generated artifacts:
+
+- `output/semantic_index_chunks/vectors.npy`
+- `output/semantic_index_chunks/metadata.json`
+- `output/semantic_index_chunks/model_info.json`
+
 ## Launch Dashboard
 
 ```bash
@@ -136,17 +168,21 @@ Dashboard features:
 - Theory vs practical filtering
 - Book cover thumbnails (first-page preview, cached locally)
 - Book detail view with related book recommendations
+- Ask Books (RAG) page for grounded Q&A with citations from local chunks
 
 ## End-to-End Validation Checklist
 
 1. Run `index_books.py` and confirm CSV/MD still generate.
-2. Run `build_semantic_index.py` and verify index artifacts exist.
-3. Start Streamlit dashboard and run a natural-language search.
-4. Apply category + theory/practical filters and confirm result updates.
-5. Open a book detail and check related books are shown.
+2. Run `build_semantic_index.py` and verify semantic index artifacts exist.
+3. Run `build_semantic_index.py` again with `semantic_chunks.jsonl` to build chunk index.
+4. Start Streamlit dashboard and run a natural-language search.
+5. Apply category + theory/practical filters and confirm result updates.
+6. Open a book detail and check related books are shown.
+7. Open Ask Books (RAG), ask a question, and confirm citation snippets are returned.
 
 ## Troubleshooting
 
 - **First embedding run is slow**: sentence-transformers downloads the model on first use.
 - **Dashboard cannot load index**: rerun indexing and semantic build commands, then verify files in `output/semantic_index/`.
+- **Ask Books (RAG) cannot load**: build chunk index and verify files in `output/semantic_index_chunks/`.
 - **No relevant results**: lower the similarity threshold in the dashboard sidebar.

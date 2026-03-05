@@ -56,6 +56,16 @@ def load_records(path: Path) -> List[Dict[str, Any]]:
 
 
 def build_embedding_text(record: Dict[str, Any]) -> str:
+    if "chunk_text" in record:
+        parts = [
+            str(record.get("title", "") or ""),
+            str(record.get("category", "") or ""),
+            str(record.get("learning_mode", "") or ""),
+            str(record.get("source_type", "") or ""),
+            str(record.get("chunk_text", "") or ""),
+        ]
+        return "\n".join(part for part in parts if part.strip())
+
     parts = [
         str(record.get("title", "") or ""),
         str(record.get("category", "") or ""),
@@ -94,8 +104,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     with (args.output_dir / "model_info.json").open("w", encoding="utf-8") as handle:
         json.dump({"model_name": args.model, "num_items": len(rows)}, handle, indent=2)
 
+    indexed_kind = "chunks" if rows and "chunk_text" in rows[0] else "books"
     print(f"Wrote semantic index to: {args.output_dir.resolve()}")
-    print(f"Indexed books: {len(rows)}")
+    print(f"Indexed {indexed_kind}: {len(rows)}")
     return 0
 
 

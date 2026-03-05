@@ -30,9 +30,11 @@ except ImportError:  # pragma: no cover - optional runtime dependency
 
 from semantic_books.learning_mode import learning_mode_labels
 from semantic_books.daily_recommend import DailyBookRecommender, DailyRecommendationWeights
+from semantic_books.rag_service import RagFilters, RagService
 from semantic_books.search_service import SearchFilters, SemanticSearchService
 
 DEFAULT_INDEX_DIR = Path("./output/semantic_index")
+DEFAULT_CHUNK_INDEX_DIR = Path("./output/semantic_index_chunks")
 DEFAULT_COVER_CACHE_DIR = Path("./output/covers")
 DEFAULT_READING_LIST_PATH = Path("./output/currently_reading.json")
 DEFAULT_DAILY_RECOMMENDATIONS_PATH = Path("./output/daily_recommendations.json")
@@ -43,6 +45,11 @@ NOTEBOOKLM_URL = "https://notebooklm.google.com"
 @st.cache_resource
 def load_service(index_dir: str) -> SemanticSearchService:
     return SemanticSearchService(Path(index_dir))
+
+
+@st.cache_resource
+def load_rag_service(index_dir: str) -> RagService:
+    return RagService(Path(index_dir))
 
 
 def _utc_now_iso() -> str:
@@ -834,6 +841,78 @@ def render_daily_recommendations_page(
                                 st.rerun()
 
 
+def render_ask_books_rag_page(
+    rag_service: RagService,
+    all_categories: List[str],
+    all_modes: List[str],
+) -> None:
+    st.header("Ask Books (RAG)")
+    st.caption("Grounded answers from your PDF/EPUB folder with source citations.")
+    question = st.text_area(
+        "Ask a question about your books",
+        value="Explain deep learning theory foundations and suggest practical follow-up books.",
+        height=100,
+    )
+    top_k_chunks = st.slider("Top chunks", min_value=4, max_value=20, value=8, step=2)
+    min_similarity = st.slider(
+        "Min chunk similarity",
+        min_value=-1.0,
+        max_value=1.0,
+        value=0.0,
+        step=0.01,
+        key="rag-min-similarity",
+    )
+    st.sidebar.header("Ask Books Filters")
+    selected_categories = st.sidebar.multiselect("Category", all_categories, default=all_categories, key="rag-category")
+    selected_modes = st.sidebar.multiselect(
+        "Theory vs Practical",
+        all_modes,
+        default=all_modes,
+        format_func=lambda m: learning_mode_labels().get(m, m),
+        key="rag-mode",
+    )
+    run_answer = st.button("Generate Grounded Answer", type="primary")
+    if run_answer and question.strip():
+        filters = RagFilters(
+            categories=selected_categories or None,
+            learning_modes=selected_modes or None,
+            min_similarity=float(min_similarity),
+        )
+        response = rag_service.answer_question(
+            query=question.strip(),
+            filters=filters,
+            top_k=int(top_k_chunks),
+        )
+        st.subheader("Answer")
+        st.write(response.get("answer", ""))
+        st.subheader("Summary")
+        st.write(response.get("summary", ""))
+        follow_ups = response.get("follow_ups", []) or []
+        if follow_ups:
+            st.subheader("Suggested follow-ups")
+            for item in follow_ups:
+                st.caption(f"- {item}")
+        citations = response.get("citations", []) or []
+        st.subheader(f"Citations ({len(citations)})")
+        if not citations:
+            st.info("No citations found for this question.")
+            return
+        for idx, item in enumerate(citations):
+            with st.container(border=True):
+                st.markdown(f"**{item.get('title', 'Untitled')}**")
+                st.caption(
+                    f"{item.get('category', 'Other')} | {item.get('learning_mode', 'unknown')} | "
+                    f"{item.get('source_label', 'chunk')} | sim {float(item.get('similarity', 0.0) or 0.0):.3f}"
+                )
+                st.write(str(item.get("snippet", "")))
+                if st.button("Open Source Location", key=f"rag-open-source-{idx}-{item.get('book_id', '')}"):
+                    ok, message = open_pdf_in_file_manager(str(item.get("absolute_path", "")))
+                    if ok:
+                        st.toast(message, icon="📂")
+                    else:
+                        st.warning(message)
+
+
 def main() -> None:
     st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
     st.markdown(
@@ -873,7 +952,11 @@ def main() -> None:
         diversity_penalty=0.1,
         explore_bonus=0.2,
     )
-    view_page = st.sidebar.radio("Page", ["Currently Reading", "Search", "Daily Recommendations", "Library"], index=1)
+    view_page = st.sidebar.radio(
+        "Page",
+        ["Currently Reading", "Search", "Ask Books (RAG)", "Daily Recommendations", "Library"],
+        index=1,
+    )
     cards_per_row = st.sidebar.slider("Cards per row", min_value=1, max_value=6, value=4, step=1)
     try:
         service = load_service(index_dir)
@@ -915,6 +998,29 @@ def main() -> None:
             reading_list_path=reading_list_path,
             weights=daily_weights,
         )
+        return
+
+    if view_page == "Ask Books (RAG)":
+        chunk_index_dir = st.sidebar.text_input(
+            "RAG chunk index directory",
+            str(DEFAULT_CHUNK_INDEX_DIR),
+        )
+        try:
+            rag_service = load_rag_service(chunk_index_dir)
+        except Exception as exc:
+            st.error(
+                "Unable to load RAG chunk index. Build chunk index first with "
+                "`build_semantic_index.py --semantic-source ./output/semantic_chunks.jsonl "
+                "--output-dir ./output/semantic_index_chunks`. "
+                f"Details: {exc}"
+            )
+            return
+        render_ask_books_rag_page(
+            rag_service=rag_service,
+            all_categories=all_categories,
+            all_modes=all_modes,
+        )
+        index_dir, cover_cache_dir, reading_list_path = render_locked_paths_sidebar()
         return
 
     top_k = st.sidebar.number_input(

@@ -361,6 +361,21 @@ class BookRecord:
     learning_mode: str = "unknown"
 
 
+@dataclass
+class ChunkRecord:
+    chunk_id: str
+    book_id: str
+    title: str
+    category: str
+    learning_mode: str
+    absolute_path: str
+    source_type: str
+    source_index: int
+    start_char: int
+    end_char: int
+    chunk_text: str
+
+
 def normalize(text: str) -> str:
     text = text.lower()
     text = re.sub(r"[_\-]+", " ", text)
@@ -717,6 +732,78 @@ def write_semantic_source_jsonl(records: Sequence[BookRecord], output_path: Path
             handle.write(json.dumps(safe_payload, ensure_ascii=False) + "\n")
 
 
+def build_semantic_chunks(
+    records: Sequence[BookRecord],
+    chunk_size: int,
+    chunk_overlap: int,
+) -> List[ChunkRecord]:
+    safe_chunk_size = max(300, int(chunk_size))
+    safe_chunk_overlap = max(0, min(int(chunk_overlap), safe_chunk_size - 1))
+    step = max(1, safe_chunk_size - safe_chunk_overlap)
+    chunks: List[ChunkRecord] = []
+
+    for record in records:
+        body_text = (record.body_preview or "").strip()
+        metadata_text = (record.metadata_text or "").strip()
+        sections: List[Tuple[str, str]] = []
+        if metadata_text:
+            sections.append(("metadata", metadata_text))
+        if body_text:
+            sections.append(("body_preview", body_text))
+
+        for source_type, source_text in sections:
+            total = len(source_text)
+            for start_char in range(0, total, step):
+                end_char = min(total, start_char + safe_chunk_size)
+                if end_char <= start_char:
+                    continue
+                chunk_text = source_text[start_char:end_char].strip()
+                if len(chunk_text) < 40:
+                    continue
+                chunk_id = hashlib.sha1(
+                    f"{record.book_id}:{source_type}:{start_char}:{end_char}".encode("utf-8")
+                ).hexdigest()[:16]
+                chunks.append(
+                    ChunkRecord(
+                        chunk_id=chunk_id,
+                        book_id=record.book_id,
+                        title=record.title,
+                        category=record.category,
+                        learning_mode=record.learning_mode,
+                        absolute_path=record.absolute_path,
+                        source_type=source_type,
+                        source_index=0,
+                        start_char=start_char,
+                        end_char=end_char,
+                        chunk_text=chunk_text,
+                    )
+                )
+                if end_char >= total:
+                    break
+    return chunks
+
+
+def write_semantic_chunks_jsonl(chunks: Sequence[ChunkRecord], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as handle:
+        for chunk in chunks:
+            payload = {
+                "chunk_id": chunk.chunk_id,
+                "book_id": chunk.book_id,
+                "title": chunk.title,
+                "category": chunk.category,
+                "learning_mode": chunk.learning_mode,
+                "absolute_path": chunk.absolute_path,
+                "source_type": chunk.source_type,
+                "source_index": chunk.source_index,
+                "start_char": chunk.start_char,
+                "end_char": chunk.end_char,
+                "chunk_text": chunk.chunk_text,
+            }
+            safe_payload = sanitize_json_value(payload)
+            handle.write(json.dumps(safe_payload, ensure_ascii=False) + "\n")
+
+
 def write_low_confidence_csv(
     records: Sequence[BookRecord],
     min_confidence: float,
@@ -865,6 +952,24 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         default=None,
         help="Optional output path for semantic source JSONL records.",
     )
+    parser.add_argument(
+        "--semantic-chunks-jsonl",
+        type=Path,
+        default=None,
+        help="Optional output path for semantic chunks JSONL records.",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=1200,
+        help="Chunk size in characters for semantic chunk export.",
+    )
+    parser.add_argument(
+        "--chunk-overlap",
+        type=int,
+        default=200,
+        help="Chunk overlap in characters for semantic chunk export.",
+    )
     return parser.parse_args(argv)
 
 
@@ -882,6 +987,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     split_low_confidence_by_category: bool = args.split_low_confidence_by_category
     low_confidence_category_dir: Optional[Path] = args.low_confidence_category_dir
     semantic_source_jsonl: Optional[Path] = args.semantic_source_jsonl
+    semantic_chunks_jsonl: Optional[Path] = args.semantic_chunks_jsonl
+    chunk_size: int = max(300, args.chunk_size)
+    chunk_overlap: int = max(0, args.chunk_overlap)
 
     try:
         CATEGORY_ORDER, SOURCE_WEIGHTS, KEYWORDS = load_runtime_config(config_path)
@@ -904,10 +1012,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     csv_path = output_dir / "books_by_category.csv"
     md_path = output_dir / "books_by_category.md"
     semantic_source_path = semantic_source_jsonl or (output_dir / "semantic_source.jsonl")
+    semantic_chunks_path = semantic_chunks_jsonl or (output_dir / "semantic_chunks.jsonl")
 
     write_csv(records, csv_path)
     write_markdown(records, md_path)
     write_semantic_source_jsonl(records, semantic_source_path)
+    chunks = build_semantic_chunks(records, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    write_semantic_chunks_jsonl(chunks, semantic_chunks_path)
 
     if min_confidence is not None:
         threshold = min(max(min_confidence, 0.0), 1.0)
@@ -929,6 +1040,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f"Wrote CSV: {csv_path.resolve()}")
     print(f"Wrote MD : {md_path.resolve()}")
     print(f"Wrote semantic source JSONL: {semantic_source_path.resolve()}")
+    print(f"Wrote semantic chunks JSONL: {semantic_chunks_path.resolve()} ({len(chunks)} chunks)")
     return 0
 
 
