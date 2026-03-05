@@ -9,6 +9,7 @@ import hashlib
 import html
 from io import BytesIO
 import json
+import math
 import platform
 import shutil
 import subprocess
@@ -18,7 +19,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 from PIL import Image
+import numpy as np
 import pandas as pd
+try:
+    import plotly.graph_objects as go
+except ImportError:  # pragma: no cover - optional runtime dependency
+    go = None
 try:
     import pypdfium2 as pdfium
 except ImportError:  # pragma: no cover - optional runtime dependency
@@ -392,6 +398,210 @@ def open_notebooklm_in_browser() -> Tuple[bool, str]:
         return False, f"Could not open browser tab for {NOTEBOOKLM_URL}"
     except Exception as exc:
         return False, f"Could not open NotebookLM: {exc}"
+
+
+def _graph_palette() -> List[str]:
+    return [
+        "#636EFA",
+        "#EF553B",
+        "#00CC96",
+        "#AB63FA",
+        "#FFA15A",
+        "#19D3F3",
+        "#FF6692",
+        "#B6E880",
+        "#FF97FF",
+        "#FECB52",
+    ]
+
+
+def _build_color_map(values: List[str]) -> Dict[str, str]:
+    palette = _graph_palette()
+    unique = sorted({v for v in values if v})
+    return {value: palette[idx % len(palette)] for idx, value in enumerate(unique)}
+
+
+def _compute_force_layout(
+    node_ids: List[str],
+    edges: List[Dict[str, Any]],
+    iterations: int = 100,
+) -> Dict[str, Tuple[float, float]]:
+    if not node_ids:
+        return {}
+    n = len(node_ids)
+    if n == 1:
+        return {node_ids[0]: (0.0, 0.0)}
+
+    if n > 420:
+        angles = np.linspace(0.0, 2.0 * math.pi, n, endpoint=False)
+        return {node_ids[i]: (float(np.cos(angles[i])), float(np.sin(angles[i]))) for i in range(n)}
+
+    rng = np.random.default_rng(42)
+    pos = rng.uniform(-1.0, 1.0, size=(n, 2)).astype(np.float64)
+    id_to_idx = {node_id: idx for idx, node_id in enumerate(node_ids)}
+
+    edge_pairs: List[Tuple[int, int, float]] = []
+    for edge in edges:
+        src = id_to_idx.get(str(edge.get("source", "")))
+        dst = id_to_idx.get(str(edge.get("target", "")))
+        if src is None or dst is None or src == dst:
+            continue
+        weight = float(edge.get("weight", 0.0) or 0.0)
+        edge_pairs.append((src, dst, max(0.02, weight)))
+
+    k = 1.2 / math.sqrt(n)
+    temp = 0.25
+    iter_count = max(40, min(160, int(iterations)))
+
+    for _ in range(iter_count):
+        disp = np.zeros_like(pos)
+        for i in range(n):
+            delta = pos[i] - pos
+            dist = np.linalg.norm(delta, axis=1) + 1e-6
+            force = (k * k) / dist
+            force[i] = 0.0
+            disp[i] += np.sum((delta / dist[:, None]) * force[:, None], axis=0)
+
+        for src, dst, weight in edge_pairs:
+            delta = pos[src] - pos[dst]
+            dist = float(np.linalg.norm(delta) + 1e-6)
+            attract = ((dist * dist) / k) * weight * 0.35
+            direction = delta / dist
+            disp[src] -= direction * attract
+            disp[dst] += direction * attract
+
+        norms = np.linalg.norm(disp, axis=1)
+        norms[norms == 0] = 1.0
+        pos += (disp / norms[:, None]) * np.minimum(norms, temp)[:, None]
+        temp *= 0.95
+
+    pos -= np.mean(pos, axis=0)
+    max_abs = float(np.max(np.abs(pos)))
+    if max_abs > 0:
+        pos = pos / max_abs
+    return {node_ids[i]: (float(pos[i, 0]), float(pos[i, 1])) for i in range(n)}
+
+
+def _extract_selected_graph_node_id(plot_state: Any) -> Optional[str]:
+    if not isinstance(plot_state, dict):
+        return None
+    selection = plot_state.get("selection", {})
+    if not isinstance(selection, dict):
+        return None
+    points = selection.get("points", [])
+    if not isinstance(points, list) or not points:
+        return None
+
+    first = points[0]
+    if not isinstance(first, dict):
+        return None
+    custom = first.get("customdata")
+    if isinstance(custom, (list, tuple)) and custom:
+        return str(custom[0])
+    if isinstance(custom, str):
+        return custom
+    return None
+
+
+def _build_relationship_figure(
+    graph_payload: Dict[str, Any],
+    color_by: str,
+    seed_ids: Optional[set[str]] = None,
+    selected_node_id: Optional[str] = None,
+):
+    if go is None:
+        return None
+
+    nodes = graph_payload.get("nodes", []) or []
+    edges = graph_payload.get("edges", []) or []
+    if not nodes:
+        return None
+
+    node_by_id = {str(node.get("id", "")): node for node in nodes}
+    node_ids = [node_id for node_id in node_by_id if node_id]
+    positions = _compute_force_layout(node_ids=node_ids, edges=edges)
+    if not positions:
+        return None
+
+    degree_map = {node_id: 0 for node_id in node_ids}
+    edge_x: List[float] = []
+    edge_y: List[float] = []
+    for edge in edges:
+        source = str(edge.get("source", ""))
+        target = str(edge.get("target", ""))
+        if source not in positions or target not in positions:
+            continue
+        degree_map[source] = degree_map.get(source, 0) + 1
+        degree_map[target] = degree_map.get(target, 0) + 1
+        x0, y0 = positions[source]
+        x1, y1 = positions[target]
+        edge_x.extend([x0, x1, None])
+        edge_y.extend([y0, y1, None])
+
+    color_field = "category" if color_by == "Category" else "learning_mode"
+    color_values = [str(node_by_id[node_id].get(color_field, "unknown")) for node_id in node_ids]
+    color_lookup = _build_color_map(color_values)
+    node_colors = [color_lookup.get(value, "#888") for value in color_values]
+
+    marker_sizes = [10 + min(22, degree_map.get(node_id, 0)) for node_id in node_ids]
+    marker_symbols = []
+    seed_ids = seed_ids or set()
+    for node_id in node_ids:
+        if node_id == selected_node_id:
+            marker_symbols.append("star")
+        elif node_id in seed_ids:
+            marker_symbols.append("diamond")
+        else:
+            marker_symbols.append("circle")
+
+    hover_text = []
+    for node_id in node_ids:
+        node = node_by_id[node_id]
+        hover_text.append(
+            "<br>".join(
+                [
+                    f"<b>{html.escape(str(node.get('title', 'Untitled')))}</b>",
+                    f"Category: {html.escape(str(node.get('category', 'Other')))}",
+                    f"Mode: {html.escape(str(node.get('learning_mode', 'unknown')))}",
+                    f"Degree: {degree_map.get(node_id, 0)}",
+                ]
+            )
+        )
+
+    edge_trace = go.Scatter(
+        x=edge_x,
+        y=edge_y,
+        mode="lines",
+        line=dict(width=0.8, color="rgba(140, 140, 140, 0.35)"),
+        hoverinfo="none",
+    )
+    node_trace = go.Scatter(
+        x=[positions[node_id][0] for node_id in node_ids],
+        y=[positions[node_id][1] for node_id in node_ids],
+        mode="markers",
+        customdata=[[node_id] for node_id in node_ids],
+        hoverinfo="text",
+        hovertext=hover_text,
+        marker=dict(
+            size=marker_sizes,
+            color=node_colors,
+            line=dict(width=1, color="rgba(255, 255, 255, 0.5)"),
+            symbol=marker_symbols,
+            opacity=0.95,
+        ),
+    )
+    fig = go.Figure(
+        data=[edge_trace, node_trace],
+        layout=go.Layout(
+            showlegend=False,
+            hovermode="closest",
+            margin=dict(l=0, r=0, t=0, b=0),
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            dragmode="pan",
+        ),
+    )
+    return fig
 
 
 def render_result_grid(
@@ -913,6 +1123,260 @@ def render_ask_books_rag_page(
                         st.warning(message)
 
 
+def render_relationship_graph_page(
+    service: SemanticSearchService,
+    cover_cache_dir: str,
+    reading_items: Dict[str, Dict[str, Any]],
+    reading_list_path: Path,
+    all_categories: List[str],
+    all_modes: List[str],
+) -> None:
+    st.header("Relationship Graph")
+    st.caption("Interactive graph of how books relate by semantic similarity.")
+    if go is None:
+        st.error("Plotly is not installed. Install dependencies from requirements.txt and restart.")
+        return
+
+    st.sidebar.header("Relationship Graph Filters")
+    selected_categories = st.sidebar.multiselect(
+        "Graph Category",
+        all_categories,
+        default=all_categories,
+        key="graph-category",
+    )
+    selected_modes = st.sidebar.multiselect(
+        "Graph Theory vs Practical",
+        all_modes,
+        default=all_modes,
+        format_func=lambda m: learning_mode_labels().get(m, m),
+        key="graph-mode",
+    )
+
+    graph_mode = st.radio(
+        "Graph scope",
+        ["Whole Library", "Focused"],
+        horizontal=True,
+        key="graph-scope-mode",
+    )
+    color_by = st.selectbox(
+        "Color nodes by",
+        ["Category", "Theory vs Practical"],
+        index=0,
+        key="graph-color-by",
+    )
+    min_edge_similarity = st.slider(
+        "Minimum edge similarity",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.3,
+        step=0.01,
+        key="graph-min-edge-sim",
+    )
+    neighbors_per_node = st.slider(
+        "Neighbors per node",
+        min_value=1,
+        max_value=15,
+        value=6,
+        step=1,
+        key="graph-neighbors-per-node",
+    )
+    max_nodes = st.slider(
+        "Max nodes",
+        min_value=30,
+        max_value=600,
+        value=220,
+        step=10,
+        key="graph-max-nodes",
+    )
+
+    filters = SearchFilters(
+        categories=selected_categories or None,
+        learning_modes=selected_modes or None,
+        min_similarity=-1.0,
+    )
+
+    graph_payload: Dict[str, Any] = {"nodes": [], "edges": []}
+    seed_ids: set[str] = set()
+    if graph_mode == "Whole Library":
+        if st.button("Build Whole-Library Graph", type="primary", key="graph-build-whole"):
+            graph_payload = service.build_whole_relationship_graph(
+                filters=filters,
+                max_nodes=int(max_nodes),
+                min_similarity=float(min_edge_similarity),
+                neighbors_per_node=int(neighbors_per_node),
+            )
+            st.session_state["graph-payload"] = graph_payload
+            st.session_state["graph-seed-ids"] = []
+        elif "graph-payload" in st.session_state:
+            graph_payload = st.session_state.get("graph-payload", {"nodes": [], "edges": []})
+    else:
+        query = st.text_input(
+            "Focus query",
+            value="deep learning theory foundations",
+            key="graph-focus-query",
+        )
+        seed_title_filter = st.text_input(
+            "Filter seed title",
+            value="",
+            key="graph-seed-filter",
+            help="Use this to quickly narrow a seed title list.",
+        )
+        filtered_items = []
+        for item in service.metadata:
+            category = str(item.get("category", "Other"))
+            mode = str(item.get("learning_mode", "unknown"))
+            if selected_categories and category not in selected_categories:
+                continue
+            if selected_modes and mode not in selected_modes:
+                continue
+            title = str(item.get("title", "Untitled"))
+            if seed_title_filter.strip() and seed_title_filter.strip().lower() not in title.lower():
+                continue
+            filtered_items.append(item)
+            if len(filtered_items) >= 400:
+                break
+
+        seed_option_to_id = {"(none)": ""}
+        for item in filtered_items:
+            label = f"{item.get('title', 'Untitled')} | {item.get('category', 'Other')}"
+            seed_option_to_id[label] = str(item.get("book_id", ""))
+
+        selected_seed_label = st.selectbox(
+            "Seed book (optional)",
+            options=list(seed_option_to_id.keys()),
+            index=0,
+            key="graph-seed-book",
+        )
+        seed_book_id = seed_option_to_id.get(selected_seed_label, "")
+
+        seed_top_k = st.slider(
+            "Seed hits from query",
+            min_value=1,
+            max_value=5,
+            value=2,
+            step=1,
+            key="graph-seed-top-k",
+        )
+        neighbor_k = st.slider(
+            "Neighbors around each seed",
+            min_value=3,
+            max_value=30,
+            value=12,
+            step=1,
+            key="graph-neighbor-k",
+        )
+        if st.button("Build Focused Graph", type="primary", key="graph-build-focused"):
+            graph_payload = service.build_focused_relationship_graph(
+                query=query.strip() or None,
+                seed_book_id=seed_book_id or None,
+                filters=filters,
+                seed_top_k=int(seed_top_k),
+                neighbor_k=int(neighbor_k),
+                max_nodes=int(max_nodes),
+                min_similarity=float(min_edge_similarity),
+                neighbors_per_node=int(neighbors_per_node),
+            )
+            st.session_state["graph-payload"] = graph_payload
+            st.session_state["graph-seed-ids"] = graph_payload.get("seed_ids", []) or []
+        elif "graph-payload" in st.session_state:
+            graph_payload = st.session_state.get("graph-payload", {"nodes": [], "edges": []})
+            st.session_state.setdefault("graph-seed-ids", [])
+
+    nodes = graph_payload.get("nodes", []) or []
+    edges = graph_payload.get("edges", []) or []
+    if not nodes:
+        st.info("Build a graph to view relationships.")
+        return
+    st.caption(f"Nodes: {len(nodes)} | Edges: {len(edges)}")
+
+    seed_ids = set(st.session_state.get("graph-seed-ids", []) or [])
+    selected_node_id = st.session_state.get("graph-selected-node-id")
+    fig = _build_relationship_figure(
+        graph_payload=graph_payload,
+        color_by=color_by,
+        seed_ids=seed_ids,
+        selected_node_id=selected_node_id,
+    )
+    if fig is None:
+        st.warning("Could not build graph visualization.")
+        return
+
+    try:
+        plot_state = st.plotly_chart(
+            fig,
+            use_container_width=True,
+            key="relationship-graph-plot",
+            on_select="rerun",
+            selection_mode=("points",),
+        )
+    except TypeError:
+        plot_state = st.plotly_chart(fig, use_container_width=True, key="relationship-graph-plot")
+
+    clicked_node_id = _extract_selected_graph_node_id(plot_state)
+    if clicked_node_id:
+        st.session_state["graph-selected-node-id"] = clicked_node_id
+        selected_node_id = clicked_node_id
+
+    node_by_id = {str(item.get("id", "")): item for item in nodes}
+    selected_node = node_by_id.get(str(selected_node_id or ""))
+    if not selected_node:
+        st.caption("Click a node to inspect details and actions.")
+        return
+
+    st.subheader("Selected Book")
+    details_col, action_col = st.columns([2, 1], vertical_alignment="top")
+    with details_col:
+        cover_path = build_cover_thumbnail(str(selected_node.get("absolute_path", "")), cover_cache_dir)
+        if cover_path:
+            st.image(cover_path, width="stretch")
+        st.markdown(f"**{selected_node.get('title', 'Untitled')}**")
+        st.caption(
+            f"{selected_node.get('category', 'Other')} | "
+            f"{selected_node.get('learning_mode', 'unknown')} | "
+            f"{get_book_format(selected_node)}"
+        )
+    with action_col:
+        if st.button("Open Source Location", key=f"graph-open-{selected_node_id}"):
+            ok, message = open_pdf_in_file_manager(str(selected_node.get("absolute_path", "")))
+            if ok:
+                st.toast(message, icon="📂")
+            else:
+                st.warning(message)
+
+        book_id = str(selected_node.get("id", ""))
+        is_reading = book_id in reading_items
+        label = "Remove Reading" if is_reading else "Mark Reading"
+        if st.button(label, key=f"graph-reading-{selected_node_id}"):
+            if not book_id:
+                st.warning("Book ID missing, cannot update reading list.")
+            elif is_reading:
+                removed_entry = reading_items.pop(book_id, None)
+                if isinstance(removed_entry, dict):
+                    removed_ok, removed_message = remove_book_copy_from_current_read_folder(removed_entry)
+                    if not removed_ok:
+                        st.warning(removed_message)
+                save_currently_reading(reading_list_path, reading_items)
+                st.toast("Removed from currently reading.", icon="📕")
+                st.rerun()
+            else:
+                entry = make_reading_entry(
+                    {
+                        "book_id": book_id,
+                        "title": selected_node.get("title", ""),
+                        "category": selected_node.get("category", "Other"),
+                        "learning_mode": selected_node.get("learning_mode", "unknown"),
+                        "absolute_path": selected_node.get("absolute_path", ""),
+                    }
+                )
+                copy_ok, copy_message = copy_book_to_current_read_folder(entry)
+                reading_items[book_id] = entry
+                save_currently_reading(reading_list_path, reading_items)
+                st.toast("Added to currently reading.", icon="📘")
+                if not copy_ok:
+                    st.warning(copy_message)
+                st.rerun()
+
+
 def main() -> None:
     st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
     st.markdown(
@@ -954,7 +1418,7 @@ def main() -> None:
     )
     view_page = st.sidebar.radio(
         "Page",
-        ["Currently Reading", "Search", "Ask Books (RAG)", "Daily Recommendations", "Library"],
+        ["Currently Reading", "Search", "Relationship Graph", "Ask Books (RAG)", "Daily Recommendations", "Library"],
         index=1,
     )
     cards_per_row = st.sidebar.slider("Cards per row", min_value=1, max_value=6, value=4, step=1)
@@ -1021,6 +1485,19 @@ def main() -> None:
             all_modes=all_modes,
         )
         index_dir, cover_cache_dir, reading_list_path = render_locked_paths_sidebar()
+        return
+
+    if view_page == "Relationship Graph":
+        index_dir, cover_cache_dir, reading_list_path = render_locked_paths_sidebar()
+        reading_items = load_currently_reading(reading_list_path)
+        render_relationship_graph_page(
+            service=service,
+            cover_cache_dir=cover_cache_dir,
+            reading_items=reading_items,
+            reading_list_path=reading_list_path,
+            all_categories=all_categories,
+            all_modes=all_modes,
+        )
         return
 
     top_k = st.sidebar.number_input(

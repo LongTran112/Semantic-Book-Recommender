@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Set
 
 import numpy as np
 try:
@@ -135,4 +135,170 @@ class SemanticSearchService:
 
         recs.sort(key=lambda item: item["score"], reverse=True)
         return recs[: max(1, top_k)]
+
+    @staticmethod
+    def _as_graph_node(item: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "id": str(item.get("book_id", "")),
+            "title": str(item.get("title", "")),
+            "category": str(item.get("category", "Other")),
+            "learning_mode": str(item.get("learning_mode", "unknown")),
+            "absolute_path": str(item.get("absolute_path", "")),
+            "filename": str(item.get("filename", "")),
+            "confidence": float(item.get("confidence", 0.0) or 0.0),
+        }
+
+    def _build_edges_for_indices(
+        self,
+        selected_indices: np.ndarray,
+        neighbors_per_node: int,
+        min_similarity: float,
+    ) -> List[Dict[str, Any]]:
+        if selected_indices.size == 0:
+            return []
+
+        local_vectors = self.vectors[selected_indices]
+        edges: List[Dict[str, Any]] = []
+        seen_pairs: Set[tuple[int, int]] = set()
+        neighbor_cap = max(1, int(neighbors_per_node))
+        threshold = float(min_similarity)
+
+        for local_i in range(len(selected_indices)):
+            sims = local_vectors @ local_vectors[local_i]
+            order = np.argsort(-sims)
+            taken = 0
+            for local_j in order:
+                if local_j == local_i:
+                    continue
+                score = float(sims[local_j])
+                if score < threshold:
+                    continue
+                src = int(selected_indices[local_i])
+                dst = int(selected_indices[local_j])
+                low, high = (src, dst) if src < dst else (dst, src)
+                if low == high or (low, high) in seen_pairs:
+                    continue
+                seen_pairs.add((low, high))
+                edges.append(
+                    {
+                        "source": str(self.metadata[low].get("book_id", "")),
+                        "target": str(self.metadata[high].get("book_id", "")),
+                        "weight": round(score, 4),
+                    }
+                )
+                taken += 1
+                if taken >= neighbor_cap:
+                    break
+        return edges
+
+    def build_whole_relationship_graph(
+        self,
+        filters: Optional[SearchFilters] = None,
+        max_nodes: int = 250,
+        min_similarity: float = 0.25,
+        neighbors_per_node: int = 6,
+    ) -> Dict[str, Any]:
+        filters = filters or SearchFilters()
+        filtered_idxs = self._filter_indices(filters)
+        if filtered_idxs.size == 0:
+            return {"nodes": [], "edges": []}
+
+        cap = max(1, int(max_nodes))
+        if filtered_idxs.size > cap:
+            ranked = sorted(
+                (int(idx) for idx in filtered_idxs),
+                key=lambda i: float(self.metadata[i].get("confidence", 0.0) or 0.0),
+                reverse=True,
+            )[:cap]
+            selected = np.array(ranked, dtype=int)
+        else:
+            selected = filtered_idxs.astype(int)
+
+        nodes = [self._as_graph_node(self.metadata[int(idx)]) for idx in selected]
+        edges = self._build_edges_for_indices(
+            selected_indices=selected,
+            neighbors_per_node=neighbors_per_node,
+            min_similarity=min_similarity,
+        )
+        return {"nodes": nodes, "edges": edges}
+
+    def build_focused_relationship_graph(
+        self,
+        query: Optional[str] = None,
+        seed_book_id: Optional[str] = None,
+        filters: Optional[SearchFilters] = None,
+        seed_top_k: int = 2,
+        neighbor_k: int = 12,
+        max_nodes: int = 120,
+        min_similarity: float = 0.2,
+        neighbors_per_node: int = 8,
+    ) -> Dict[str, Any]:
+        filters = filters or SearchFilters()
+        filtered_idxs = self._filter_indices(filters)
+        if filtered_idxs.size == 0:
+            return {"nodes": [], "edges": [], "seed_ids": []}
+        allowed = {int(i) for i in filtered_idxs}
+
+        seed_indices: List[int] = []
+        if seed_book_id:
+            src_idx = self.book_id_to_idx.get(seed_book_id)
+            if src_idx is not None and int(src_idx) in allowed:
+                seed_indices.append(int(src_idx))
+
+        if query:
+            query_hits = self.search_books(query=query, filters=filters, top_k=max(1, int(seed_top_k)))
+            for hit in query_hits:
+                hit_id = str(hit.get("book_id", ""))
+                hit_idx = self.book_id_to_idx.get(hit_id)
+                if hit_idx is not None and int(hit_idx) in allowed:
+                    seed_indices.append(int(hit_idx))
+
+        if not seed_indices:
+            fallback = sorted(
+                allowed,
+                key=lambda i: float(self.metadata[i].get("confidence", 0.0) or 0.0),
+                reverse=True,
+            )
+            if fallback:
+                seed_indices.append(int(fallback[0]))
+
+        unique_seeds = list(dict.fromkeys(seed_indices))
+        selected_set: Set[int] = set(unique_seeds)
+        neighbor_cap = max(1, int(neighbor_k))
+        for seed_idx in unique_seeds:
+            sims = self.vectors @ self.vectors[int(seed_idx)]
+            candidates = np.argsort(-sims)
+            taken = 0
+            for idx in candidates:
+                idx_int = int(idx)
+                if idx_int == int(seed_idx) or idx_int not in allowed:
+                    continue
+                if float(sims[idx_int]) < float(min_similarity):
+                    continue
+                selected_set.add(idx_int)
+                taken += 1
+                if taken >= neighbor_cap:
+                    break
+
+        selected_sorted = sorted(selected_set)
+        if len(selected_sorted) > int(max_nodes):
+            keep = set(unique_seeds)
+            remaining = [i for i in selected_sorted if i not in keep]
+            remaining_sorted = sorted(
+                remaining,
+                key=lambda i: float(self.metadata[i].get("confidence", 0.0) or 0.0),
+                reverse=True,
+            )
+            room = max(0, int(max_nodes) - len(keep))
+            selected_sorted = sorted(list(keep) + remaining_sorted[:room])
+        selected = np.array(selected_sorted, dtype=int)
+
+        nodes = [self._as_graph_node(self.metadata[int(idx)]) for idx in selected]
+        edges = self._build_edges_for_indices(
+            selected_indices=selected,
+            neighbors_per_node=neighbors_per_node,
+            min_similarity=min_similarity,
+        )
+        seed_ids = [str(self.metadata[i].get("book_id", "")) for i in unique_seeds]
+        return {"nodes": nodes, "edges": edges, "seed_ids": seed_ids}
 
