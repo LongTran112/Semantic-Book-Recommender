@@ -165,6 +165,18 @@ class RagApiTests(unittest.TestCase):
         response = self.client.post("/rag/answer", json={"query": "", "top_k": 0})
         self.assertEqual(response.status_code, 422)
 
+    @patch("api.get_rag_service")
+    def test_answer_stream_endpoint_returns_events(self, mock_get_service) -> None:
+        mock_get_service.return_value = _FakeRagService()
+        with self.client.stream(
+            "POST",
+            "/rag/answer-stream",
+            json={"query": "deep learning foundations", "ollama": {"enabled": True}},
+        ) as response:
+            self.assertEqual(response.status_code, 200)
+            text = response.read().decode("utf-8")
+        self.assertIn('"type": "final"', text)
+
 
 if __name__ == "__main__":
     unittest.main()

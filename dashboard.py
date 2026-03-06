@@ -1664,6 +1664,7 @@ def render_ask_books_rag_page(
     )
 
     with st.spinner("Generating grounded answer..."):
+        streamed_text = ""
         try:
             if execution_mode == "API (/rag/answer)":
                 response = _call_rag_api_answer(
@@ -1706,6 +1707,17 @@ def render_ask_books_rag_page(
                     num_ctx=int(ollama_num_ctx),
                     timeout_sec=int(ollama_timeout_sec),
                 )
+                stream_placeholder = st.empty() if generation_mode == "ollama" else None
+                stream_status_placeholder = st.empty() if generation_mode == "ollama" else None
+
+                def _on_token(token: str) -> None:
+                    nonlocal streamed_text
+                    streamed_text += str(token)
+                    if stream_placeholder is not None:
+                        stream_placeholder.markdown(streamed_text + "▌")
+                    if stream_status_placeholder is not None:
+                        stream_status_placeholder.caption("Generating answer...")
+
                 response = rag_service.answer_question(
                     query=query,
                     filters=filters,
@@ -1714,7 +1726,12 @@ def render_ask_books_rag_page(
                     retrieval_config=retrieval_config,
                     llm_config=llm_config,
                     ollama_config=ollama_config,
+                    on_token=_on_token if generation_mode == "ollama" else None,
                 )
+                if stream_placeholder is not None:
+                    stream_placeholder.empty()
+                if stream_status_placeholder is not None:
+                    stream_status_placeholder.empty()
         except Exception as exc:
             st.error(f"Could not generate answer: {exc}")
             return
