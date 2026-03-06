@@ -1265,6 +1265,37 @@ def _render_rag_chat_response(turn_idx: int, response: Dict[str, Any], show_debu
             st.json(response)
 
 
+def _render_rag_perf_rollup(chat_history: List[Dict[str, Any]], window: int = 10) -> None:
+    recent = chat_history[-max(1, int(window)) :]
+    metrics_rows: List[Dict[str, float]] = []
+    for item in recent:
+        response = item.get("response", {})
+        metrics = response.get("metrics", {}) if isinstance(response, dict) else {}
+        if not isinstance(metrics, dict) or not metrics:
+            continue
+        metrics_rows.append(
+            {
+                "total_ms": float(metrics.get("total_ms", 0.0) or 0.0),
+                "retrieval_ms": float(metrics.get("retrieval_ms", 0.0) or 0.0),
+                "generation_ms": float(metrics.get("generation_ms", 0.0) or 0.0),
+                "peak_rss_mb": float(metrics.get("peak_rss_mb", 0.0) or 0.0),
+            }
+        )
+    if not metrics_rows:
+        return
+
+    count = len(metrics_rows)
+    avg_total = sum(row["total_ms"] for row in metrics_rows) / count
+    avg_retrieval = sum(row["retrieval_ms"] for row in metrics_rows) / count
+    avg_generation = sum(row["generation_ms"] for row in metrics_rows) / count
+    max_rss = max(row["peak_rss_mb"] for row in metrics_rows)
+    st.caption(
+        f"Recent performance (last {count} answers): avg total {avg_total:.1f} ms | "
+        f"avg retrieval {avg_retrieval:.1f} ms | avg generation {avg_generation:.1f} ms | "
+        f"max peak RSS {max_rss:.1f} MB"
+    )
+
+
 def render_ask_books_rag_page(
     rag_service: RagService,
     all_categories: List[str],
@@ -1311,6 +1342,8 @@ def render_ask_books_rag_page(
             st.session_state["rag-chat-history"] = []
             st.session_state["rag-pending-question"] = ""
             st.rerun()
+
+    _render_rag_perf_rollup(st.session_state.get("rag-chat-history", []), window=10)
 
     top_k_chunks = st.slider("Top chunks", min_value=4, max_value=20, value=8, step=2, key="rag-top-k-chunks")
     max_citations = st.slider("Max citations", min_value=2, max_value=10, value=6, step=1, key="rag-max-citations")
