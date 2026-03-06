@@ -85,6 +85,8 @@ class RagServiceTests(unittest.TestCase):
             self.assertEqual(response["follow_ups"], service._build_follow_ups())
             citation_ids = [str(item.get("citation_id", "")) for item in response["citations"]]
             self.assertTrue(all(cid.startswith("C") for cid in citation_ids))
+            self.assertIn("metrics", response)
+            self.assertIn("total_ms", response["metrics"])
 
     @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
     def test_hybrid_retrieval_includes_lexical_signals(self, _mock_model) -> None:

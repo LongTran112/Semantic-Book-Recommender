@@ -62,6 +62,16 @@ class _FakeRagService:
             ],
             "generation_mode": "deterministic",
             "fallback_reason": "",
+            "metrics": {
+                "total_ms": 123.4,
+                "retrieval_ms": 23.4,
+                "generation_ms": 100.0,
+                "retrieved_chunks": 1,
+                "used_citations": 1,
+                "prompt_chars": 512,
+                "answer_chars": 47,
+                "peak_rss_mb": 256.0,
+            },
         }
 
     def _build_follow_ups(self):
@@ -124,6 +134,7 @@ class RagApiTests(unittest.TestCase):
         self.assertIn("follow_ups", payload)
         self.assertTrue(payload["follow_ups"])
         self.assertEqual(payload["generation_mode"], "deterministic")
+        self.assertIn("metrics", payload)
         self.assertFalse(fake.last_answer_kwargs["llm_config"].enabled)
         self.assertFalse(fake.last_answer_kwargs["ollama_config"].enabled)
 

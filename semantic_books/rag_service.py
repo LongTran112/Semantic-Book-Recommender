@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 import math
+import resource
 import re
+import sys
+import time
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -341,6 +344,17 @@ class RagService:
             lines.append(f"- {title}: {snippet} [{citation_id}]")
         return "Answer:\n" + "\n".join(lines)
 
+    @staticmethod
+    def _peak_rss_mb() -> float:
+        try:
+            usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            # macOS reports bytes, Linux reports KB.
+            if sys.platform.startswith("darwin"):
+                return round(float(usage) / (1024.0 * 1024.0), 2)
+            return round(float(usage) / 1024.0, 2)
+        except Exception:
+            return 0.0
+
     def answer_question(
         self,
         query: str,
@@ -351,9 +365,13 @@ class RagService:
         llm_config: Optional[LlamaCppConfig] = None,
         ollama_config: Optional[OllamaConfig] = None,
     ) -> Dict[str, Any]:
+        total_started = time.perf_counter()
+        retrieval_started = time.perf_counter()
         cfg = retrieval_config or RetrievalConfig(final_top_k=max(1, int(top_k)))
         chunks = self.retrieve_chunks(query=query, filters=filters, top_k=top_k, retrieval_config=cfg)
+        retrieval_ms = round((time.perf_counter() - retrieval_started) * 1000.0, 2)
         if not chunks:
+            total_ms = round((time.perf_counter() - total_started) * 1000.0, 2)
             return {
                 "answer": "I could not find grounded passages for that question in your indexed books.",
                 "summary": "Try broadening the question, increasing candidate pool, or lowering similarity filters.",
@@ -364,6 +382,16 @@ class RagService:
                 "citations": [],
                 "generation_mode": "deterministic",
                 "fallback_reason": "",
+                "metrics": {
+                    "total_ms": total_ms,
+                    "retrieval_ms": retrieval_ms,
+                    "generation_ms": 0.0,
+                    "retrieved_chunks": 0,
+                    "used_citations": 0,
+                    "prompt_chars": 0,
+                    "answer_chars": 0,
+                    "peak_rss_mb": self._peak_rss_mb(),
+                },
             }
 
         citations = self._build_citations(chunks, max_citations=max_citations)
@@ -379,13 +407,18 @@ class RagService:
         generation_mode = "deterministic"
         generation_cfg = llm_config or LlamaCppConfig()
         ollama_cfg = ollama_config or OllamaConfig()
+        generation_ms = 0.0
+        prompt_chars = 0
         if generation_cfg.enabled or ollama_cfg.enabled:
             prompt = self._build_generation_prompt(query=query, citations=citations)
+            prompt_chars = len(prompt)
             generator = create_generator(llama_cfg=generation_cfg, ollama_cfg=ollama_cfg)
             if generator is None:
                 fallback_reason = "No generation backend enabled or available."
             else:
+                generation_started = time.perf_counter()
                 result = generator.generate(prompt)
+                generation_ms = round((time.perf_counter() - generation_started) * 1000.0, 2)
                 known_citations = {str(item["citation_id"]) for item in citations}
                 if result.error:
                     fallback_reason = str(result.error)
@@ -397,6 +430,8 @@ class RagService:
 
         if not generated_answer:
             generated_answer = self._deterministic_answer(chunks, citations)
+        total_ms = round((time.perf_counter() - total_started) * 1000.0, 2)
+        citations_used = len({cid for cid in re.findall(r"\[(C\d+)\]", generated_answer)})
 
         return {
             "answer": generated_answer,
@@ -405,4 +440,14 @@ class RagService:
             "citations": citations,
             "generation_mode": generation_mode,
             "fallback_reason": fallback_reason,
+            "metrics": {
+                "total_ms": total_ms,
+                "retrieval_ms": retrieval_ms,
+                "generation_ms": generation_ms,
+                "retrieved_chunks": len(chunks),
+                "used_citations": citations_used,
+                "prompt_chars": prompt_chars,
+                "answer_chars": len(generated_answer),
+                "peak_rss_mb": self._peak_rss_mb(),
+            },
         }

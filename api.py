@@ -95,6 +95,7 @@ class AnswerResponse(BaseModel):
     citations: List[Dict[str, Any]]
     generation_mode: str
     fallback_reason: str
+    metrics: Optional[Dict[str, Any]] = None
 
 
 def _compact_sentence(text: str, max_len: int = 320) -> str:

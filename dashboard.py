@@ -1194,6 +1194,19 @@ def _call_rag_api_answer(api_url: str, payload: Dict[str, Any], timeout_sec: int
 
 def _render_rag_chat_response(turn_idx: int, response: Dict[str, Any], show_debug: bool) -> None:
     st.caption(f"Generation mode: {response.get('generation_mode', 'deterministic')}")
+    metrics = response.get("metrics", {}) or {}
+    if isinstance(metrics, dict) and metrics:
+        total_ms = float(metrics.get("total_ms", 0.0) or 0.0)
+        retrieval_ms = float(metrics.get("retrieval_ms", 0.0) or 0.0)
+        generation_ms = float(metrics.get("generation_ms", 0.0) or 0.0)
+        peak_rss_mb = float(metrics.get("peak_rss_mb", 0.0) or 0.0)
+        st.caption(
+            "Timing: "
+            f"total {total_ms:.1f} ms | retrieval {retrieval_ms:.1f} ms | generation {generation_ms:.1f} ms | "
+            f"peak RSS {peak_rss_mb:.1f} MB"
+        )
+        with st.expander("Answer diagnostics", expanded=False):
+            st.json(metrics)
     fallback_reason = str(response.get("fallback_reason", "") or "").strip()
     if fallback_reason:
         st.info(f"Fallback used: {fallback_reason}")
