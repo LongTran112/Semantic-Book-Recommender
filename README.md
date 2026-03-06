@@ -171,6 +171,95 @@ Dashboard features:
 - Ask Books (RAG) page for grounded Q&A with citations from local chunks
 - Relationship Graph page (Obsidian-style) with whole-library and focused graph modes
 
+Streamlit is the primary frontend for this project. FastAPI endpoints are optional and mainly for external integrations/parity checks.
+
+### Ask Books Phase 2 Controls
+
+The `Ask Books (RAG)` page now supports two major upgrade paths:
+
+- **Path A (Retriever upgrade):** hybrid retrieval (`dense + lexical`), candidate pool tuning, and optional reranker.
+- **Path B (Generator upgrade):** local `llama.cpp` answering with strict citation checks and automatic deterministic fallback.
+
+It also supports a Streamlit-first chat workflow:
+
+- Persistent chat history using chat bubbles.
+- One-click follow-up prompts from each answer.
+- Citation cards in expandable sections, with source-open actions.
+- Retrieval presets (`Balanced`, `Precision`, `Recall`) with pin/unpin and clear-chat controls.
+- Optional execution mode toggle between direct local RAG and FastAPI `/rag/answer`.
+
+Recommended first pass:
+
+- Keep `Answer mode = deterministic`.
+- Enable hybrid retrieval.
+- Start with `dense=0.7`, `lexical=0.3`, candidate pool `48`.
+- Turn on reranker only after baseline works.
+
+For local generator mode (`llama.cpp`):
+
+- Install dependencies from `requirements.txt`.
+- Download a `.gguf` model locally.
+- Set model path in the Ask page and switch to `Answer mode = llama.cpp`.
+- If citations are invalid or runtime fails, dashboard falls back to deterministic grounded output.
+
+## Launch RAG API (FastAPI)
+
+This API is optional. Use it when you need programmatic access from external apps or you want to compare API parity with Streamlit Ask Books.
+
+Install dependencies first (includes FastAPI + LangChain):
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+Start the API server:
+
+```bash
+.venv/bin/uvicorn api:app --reload --port 8000
+```
+
+Core endpoints:
+
+- `GET /health` - checks chunk index availability and service readiness.
+- `POST /rag/retrieve` - returns retrieved chunks only (debug/explainability).
+- `POST /rag/answer` - canonical grounded answer contract (recommended default).
+- `POST /rag/answer-lc` - experimental LangChain route with citation-safe fallback.
+
+When to use each answer endpoint:
+
+- Use `/rag/answer` for stable production behavior consistent with Streamlit Ask Books.
+- Use `/rag/answer-lc` to experiment with LangChain orchestration while retaining safe fallback to canonical RAG output.
+
+Example request (`/rag/answer`):
+
+```bash
+curl -X POST "http://127.0.0.1:8000/rag/answer" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Give me deep learning theory foundations",
+    "top_k": 6,
+    "max_citations": 4,
+    "filters": {
+      "categories": ["DeepLearning"],
+      "learning_modes": ["theory"],
+      "min_similarity": 0.0
+    },
+    "retrieval": {
+      "hybrid_enabled": true,
+      "dense_weight": 0.7,
+      "lexical_weight": 0.3,
+      "candidate_pool_size": 48,
+      "final_top_k": 6,
+      "reranker_enabled": false,
+      "reranker_model_name": null,
+      "reranker_top_n": 24
+    },
+    "llm": {
+      "enabled": false
+    }
+  }'
+```
+
 ## Relationship Graph Page
 
 Use `Relationship Graph` in the dashboard sidebar to visualize semantic links between books.
@@ -195,12 +284,18 @@ For large libraries, keep the graph responsive with:
 5. Apply category + theory/practical filters and confirm result updates.
 6. Open a book detail and check related books are shown.
 7. Open Ask Books (RAG), ask a question, and confirm citation snippets are returned.
-8. Open Relationship Graph and confirm node selection + actions work.
+8. In Ask Books, enable hybrid retrieval and verify results change with dense/lexical weights.
+9. In Ask Books, test `llama.cpp` mode and verify answers include citation markers (or fallback message appears).
+10. Open Relationship Graph and confirm node selection + actions work.
+11. Start FastAPI server and call `/health`.
+12. Call `/rag/answer` and verify citations + generation mode in JSON response.
+13. Optionally call `/rag/answer-lc` and verify fallback behavior when citations are invalid.
 
 ## Troubleshooting
 
 - **First embedding run is slow**: sentence-transformers downloads the model on first use.
 - **Dashboard cannot load index**: rerun indexing and semantic build commands, then verify files in `output/semantic_index/`.
 - **Ask Books (RAG) cannot load**: build chunk index and verify files in `output/semantic_index_chunks/`.
+- **llama.cpp mode falls back to deterministic**: verify `llama-cpp-python` is installed, model path exists, and answer includes citation markers like `[C1]`.
 - **Relationship graph is dense/slow**: reduce max nodes, increase min edge similarity, or lower neighbors per node.
 - **No relevant results**: lower the similarity threshold in the dashboard sidebar.

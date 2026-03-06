@@ -13,6 +13,8 @@ import math
 import platform
 import shutil
 import subprocess
+import urllib.error
+import urllib.request
 import webbrowser
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -36,6 +38,7 @@ except ImportError:  # pragma: no cover - optional runtime dependency
 
 from semantic_books.learning_mode import learning_mode_labels
 from semantic_books.daily_recommend import DailyBookRecommender, DailyRecommendationWeights
+from semantic_books.rag_config import LlamaCppConfig, RetrievalConfig
 from semantic_books.rag_service import RagFilters, RagService
 from semantic_books.search_service import SearchFilters, SemanticSearchService
 
@@ -46,6 +49,35 @@ DEFAULT_READING_LIST_PATH = Path("./output/currently_reading.json")
 DEFAULT_DAILY_RECOMMENDATIONS_PATH = Path("./output/daily_recommendations.json")
 DEFAULT_CURRENT_READ_BOOKS_DIR = Path("./current-read-books")
 NOTEBOOKLM_URL = "https://notebooklm.google.com"
+RAG_RETRIEVAL_PRESETS: Dict[str, Dict[str, Any]] = {
+    "Balanced": {
+        "top_k_chunks": 8,
+        "use_hybrid": True,
+        "dense_weight": 0.7,
+        "lexical_weight": 0.3,
+        "candidate_pool_size": 48,
+        "reranker_enabled": False,
+        "reranker_top_n": 24,
+    },
+    "Precision": {
+        "top_k_chunks": 6,
+        "use_hybrid": True,
+        "dense_weight": 0.8,
+        "lexical_weight": 0.2,
+        "candidate_pool_size": 40,
+        "reranker_enabled": True,
+        "reranker_top_n": 20,
+    },
+    "Recall": {
+        "top_k_chunks": 12,
+        "use_hybrid": True,
+        "dense_weight": 0.6,
+        "lexical_weight": 0.4,
+        "candidate_pool_size": 72,
+        "reranker_enabled": False,
+        "reranker_top_n": 24,
+    },
+}
 
 
 @st.cache_resource
@@ -1051,6 +1083,156 @@ def render_daily_recommendations_page(
                                 st.rerun()
 
 
+def _apply_rag_retrieval_preset(preset_name: str) -> None:
+    preset = RAG_RETRIEVAL_PRESETS.get(preset_name)
+    if not preset:
+        return
+    st.session_state["rag-top-k-chunks"] = int(preset["top_k_chunks"])
+    st.session_state["rag-hybrid-enabled"] = bool(preset["use_hybrid"])
+    st.session_state["rag-dense-weight"] = float(preset["dense_weight"])
+    st.session_state["rag-lexical-weight"] = float(preset["lexical_weight"])
+    st.session_state["rag-candidate-pool"] = int(preset["candidate_pool_size"])
+    st.session_state["rag-reranker-enabled"] = bool(preset["reranker_enabled"])
+    st.session_state["rag-reranker-topn"] = int(preset["reranker_top_n"])
+
+
+def _build_rag_answer_payload(
+    query: str,
+    top_k_chunks: int,
+    max_citations: int,
+    selected_categories: List[str],
+    selected_modes: List[str],
+    min_similarity: float,
+    use_hybrid: bool,
+    dense_weight: float,
+    lexical_weight: float,
+    candidate_pool_size: int,
+    reranker_enabled: bool,
+    reranker_model: str,
+    reranker_top_n: int,
+    generation_mode: str,
+    llama_model_path: str,
+    llama_n_ctx: int,
+    llama_max_tokens: int,
+    llama_temp: float,
+    llama_top_p: float,
+    llama_threads: int,
+    llama_gpu_layers: int,
+) -> Dict[str, Any]:
+    return {
+        "query": query.strip(),
+        "top_k": int(top_k_chunks),
+        "max_citations": int(max_citations),
+        "filters": {
+            "categories": selected_categories or None,
+            "learning_modes": selected_modes or None,
+            "min_similarity": float(min_similarity),
+        },
+        "retrieval": {
+            "hybrid_enabled": bool(use_hybrid),
+            "dense_weight": float(dense_weight),
+            "lexical_weight": float(lexical_weight),
+            "candidate_pool_size": int(candidate_pool_size),
+            "final_top_k": int(top_k_chunks),
+            "reranker_enabled": bool(reranker_enabled),
+            "reranker_model_name": str(reranker_model).strip() if reranker_enabled else None,
+            "reranker_top_n": int(reranker_top_n),
+        },
+        "llm": {
+            "enabled": generation_mode == "llama.cpp",
+            "model_path": str(llama_model_path).strip(),
+            "n_ctx": int(llama_n_ctx),
+            "max_tokens": int(llama_max_tokens),
+            "temperature": float(llama_temp),
+            "top_p": float(llama_top_p),
+            "n_threads": int(llama_threads),
+            "n_gpu_layers": int(llama_gpu_layers),
+        },
+    }
+
+
+def _call_rag_api_answer(api_url: str, payload: Dict[str, Any], timeout_sec: int = 30) -> Dict[str, Any]:
+    body = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        api_url,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=max(3, int(timeout_sec))) as response:
+            content = response.read().decode("utf-8")
+            data = json.loads(content) if content.strip() else {}
+            if not isinstance(data, dict):
+                raise ValueError("API returned non-object JSON response.")
+            return data
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"API HTTP error {exc.code}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Could not reach API endpoint: {exc}") from exc
+
+
+def _render_rag_chat_response(turn_idx: int, response: Dict[str, Any], show_debug: bool) -> None:
+    st.caption(f"Generation mode: {response.get('generation_mode', 'deterministic')}")
+    fallback_reason = str(response.get("fallback_reason", "") or "").strip()
+    if fallback_reason:
+        st.info(f"Fallback used: {fallback_reason}")
+
+    st.markdown("**Answer**")
+    st.write(response.get("answer", ""))
+    st.markdown("**Summary**")
+    st.write(response.get("summary", ""))
+
+    follow_ups = response.get("follow_ups", []) or []
+    if follow_ups:
+        st.markdown("**Suggested follow-ups**")
+        for idx, prompt in enumerate(follow_ups):
+            if st.button(str(prompt), key=f"rag-followup-{turn_idx}-{idx}"):
+                st.session_state["rag-pending-question"] = str(prompt)
+                st.rerun()
+
+    citations = response.get("citations", []) or []
+    st.markdown(f"**Citations ({len(citations)})**")
+    if not citations:
+        st.info("No citations found for this question.")
+    for idx, item in enumerate(citations):
+        title = str(item.get("title", "Untitled"))
+        label = (
+            f"{title} | {item.get('category', 'Other')} | "
+            f"{item.get('learning_mode', 'unknown')} | "
+            f"{item.get('source_label', 'chunk')} | "
+            f"sim {float(item.get('similarity', 0.0) or 0.0):.3f}"
+        )
+        with st.expander(label, expanded=False):
+            st.write(str(item.get("snippet", "")))
+            if st.button(
+                "Open Source Location",
+                key=f"rag-open-source-{turn_idx}-{idx}-{item.get('book_id', '')}",
+            ):
+                ok, message = open_pdf_in_file_manager(str(item.get("absolute_path", "")))
+                if ok:
+                    st.toast(message, icon="📂")
+                else:
+                    st.warning(message)
+            if show_debug:
+                st.json(
+                    {
+                        "citation_id": item.get("citation_id", ""),
+                        "book_id": item.get("book_id", ""),
+                        "absolute_path": item.get("absolute_path", ""),
+                        "start_char": item.get("start_char", 0),
+                        "end_char": item.get("end_char", 0),
+                        "chunk_order": item.get("chunk_order", 0),
+                        "chunk_len": item.get("chunk_len", 0),
+                    }
+                )
+
+    if show_debug:
+        with st.expander("Debug response payload", expanded=False):
+            st.json(response)
+
+
 def render_ask_books_rag_page(
     rag_service: RagService,
     all_categories: List[str],
@@ -1058,12 +1240,48 @@ def render_ask_books_rag_page(
 ) -> None:
     st.header("Ask Books (RAG)")
     st.caption("Grounded answers from your PDF/EPUB folder with source citations.")
-    question = st.text_area(
-        "Ask a question about your books",
-        value="Explain deep learning theory foundations and suggest practical follow-up books.",
-        height=100,
+
+    if "rag-chat-history" not in st.session_state:
+        st.session_state["rag-chat-history"] = []
+    if "rag-pending-question" not in st.session_state:
+        st.session_state["rag-pending-question"] = ""
+    if "rag-pinned-preset" not in st.session_state:
+        st.session_state["rag-pinned-preset"] = ""
+
+    st.subheader("Conversation Controls")
+    preset_names = list(RAG_RETRIEVAL_PRESETS.keys())
+    default_preset_name = str(st.session_state.get("rag-pinned-preset", "") or "Balanced")
+    if default_preset_name not in RAG_RETRIEVAL_PRESETS:
+        default_preset_name = "Balanced"
+    preset_idx = preset_names.index(default_preset_name)
+    chosen_preset = st.selectbox(
+        "Retrieval preset",
+        options=preset_names,
+        index=preset_idx,
+        key="rag-preset-choice",
     )
-    top_k_chunks = st.slider("Top chunks", min_value=4, max_value=20, value=8, step=2)
+    controls_col1, controls_col2, controls_col3 = st.columns(3)
+    with controls_col1:
+        if st.button("Apply preset", key="rag-apply-preset"):
+            _apply_rag_retrieval_preset(chosen_preset)
+            st.rerun()
+    with controls_col2:
+        pinned = str(st.session_state.get("rag-pinned-preset", "") or "")
+        pin_label = "Unpin preset" if pinned == chosen_preset else "Pin preset"
+        if st.button(pin_label, key="rag-pin-preset"):
+            if pinned == chosen_preset:
+                st.session_state["rag-pinned-preset"] = ""
+            else:
+                st.session_state["rag-pinned-preset"] = chosen_preset
+            st.rerun()
+    with controls_col3:
+        if st.button("Clear chat", key="rag-clear-chat"):
+            st.session_state["rag-chat-history"] = []
+            st.session_state["rag-pending-question"] = ""
+            st.rerun()
+
+    top_k_chunks = st.slider("Top chunks", min_value=4, max_value=20, value=8, step=2, key="rag-top-k-chunks")
+    max_citations = st.slider("Max citations", min_value=2, max_value=10, value=6, step=1, key="rag-max-citations")
     min_similarity = st.slider(
         "Min chunk similarity",
         min_value=-1.0,
@@ -1072,6 +1290,144 @@ def render_ask_books_rag_page(
         step=0.01,
         key="rag-min-similarity",
     )
+    show_debug = st.toggle("Show retrieval debug details", value=False, key="rag-show-debug")
+
+    st.subheader("Execution Mode")
+    execution_mode = st.radio(
+        "Execution path",
+        ["Direct (local RagService)", "API (/rag/answer)"],
+        horizontal=True,
+        key="rag-execution-mode",
+    )
+    api_answer_url = st.text_input(
+        "API answer URL",
+        value="http://127.0.0.1:8000/rag/answer",
+        key="rag-api-answer-url",
+        disabled=execution_mode != "API (/rag/answer)",
+    )
+    api_timeout_sec = st.slider(
+        "API timeout (seconds)",
+        min_value=5,
+        max_value=120,
+        value=30,
+        step=5,
+        key="rag-api-timeout-sec",
+        disabled=execution_mode != "API (/rag/answer)",
+    )
+
+    st.subheader("Advanced Retrieval")
+    use_hybrid = st.toggle("Enable hybrid retrieval (dense + lexical)", value=True, key="rag-hybrid-enabled")
+    dense_weight = st.slider(
+        "Dense weight",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.7,
+        step=0.05,
+        key="rag-dense-weight",
+        disabled=not use_hybrid,
+    )
+    lexical_weight = st.slider(
+        "Lexical weight",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.3,
+        step=0.05,
+        key="rag-lexical-weight",
+        disabled=not use_hybrid,
+    )
+    candidate_pool_size = st.slider(
+        "Candidate pool size",
+        min_value=8,
+        max_value=128,
+        value=48,
+        step=4,
+        key="rag-candidate-pool",
+    )
+    reranker_enabled = st.toggle("Enable reranker", value=False, key="rag-reranker-enabled")
+    reranker_model = st.text_input(
+        "Reranker model name (CrossEncoder)",
+        value="cross-encoder/ms-marco-MiniLM-L-6-v2",
+        key="rag-reranker-model",
+        disabled=not reranker_enabled,
+    )
+    reranker_top_n = st.slider(
+        "Reranker top-N",
+        min_value=4,
+        max_value=64,
+        value=24,
+        step=4,
+        key="rag-reranker-topn",
+        disabled=not reranker_enabled,
+    )
+
+    st.subheader("Generation")
+    generation_mode = st.radio(
+        "Answer mode",
+        ["deterministic", "llama.cpp"],
+        horizontal=True,
+        key="rag-generation-mode",
+    )
+    llama_model_path = st.text_input(
+        "llama.cpp model path (.gguf)",
+        value="",
+        key="rag-llama-model-path",
+        disabled=generation_mode != "llama.cpp",
+    )
+    llama_n_ctx = st.slider(
+        "llama.cpp context window",
+        min_value=512,
+        max_value=8192,
+        value=2048,
+        step=256,
+        key="rag-llama-n-ctx",
+        disabled=generation_mode != "llama.cpp",
+    )
+    llama_max_tokens = st.slider(
+        "llama.cpp max output tokens",
+        min_value=64,
+        max_value=1024,
+        value=420,
+        step=32,
+        key="rag-llama-max-tokens",
+        disabled=generation_mode != "llama.cpp",
+    )
+    llama_temp = st.slider(
+        "llama.cpp temperature",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.2,
+        step=0.05,
+        key="rag-llama-temp",
+        disabled=generation_mode != "llama.cpp",
+    )
+    llama_top_p = st.slider(
+        "llama.cpp top_p",
+        min_value=0.1,
+        max_value=1.0,
+        value=0.9,
+        step=0.05,
+        key="rag-llama-top-p",
+        disabled=generation_mode != "llama.cpp",
+    )
+    llama_threads = st.slider(
+        "llama.cpp threads",
+        min_value=1,
+        max_value=32,
+        value=6,
+        step=1,
+        key="rag-llama-threads",
+        disabled=generation_mode != "llama.cpp",
+    )
+    llama_gpu_layers = st.slider(
+        "llama.cpp GPU layers",
+        min_value=0,
+        max_value=120,
+        value=0,
+        step=1,
+        key="rag-llama-gpu-layers",
+        disabled=generation_mode != "llama.cpp",
+    )
+
     st.sidebar.header("Ask Books Filters")
     selected_categories = st.sidebar.multiselect("Category", all_categories, default=all_categories, key="rag-category")
     selected_modes = st.sidebar.multiselect(
@@ -1081,46 +1437,97 @@ def render_ask_books_rag_page(
         format_func=lambda m: learning_mode_labels().get(m, m),
         key="rag-mode",
     )
-    run_answer = st.button("Generate Grounded Answer", type="primary")
-    if run_answer and question.strip():
-        filters = RagFilters(
-            categories=selected_categories or None,
-            learning_modes=selected_modes or None,
-            min_similarity=float(min_similarity),
-        )
-        response = rag_service.answer_question(
-            query=question.strip(),
-            filters=filters,
-            top_k=int(top_k_chunks),
-        )
-        st.subheader("Answer")
-        st.write(response.get("answer", ""))
-        st.subheader("Summary")
-        st.write(response.get("summary", ""))
-        follow_ups = response.get("follow_ups", []) or []
-        if follow_ups:
-            st.subheader("Suggested follow-ups")
-            for item in follow_ups:
-                st.caption(f"- {item}")
-        citations = response.get("citations", []) or []
-        st.subheader(f"Citations ({len(citations)})")
-        if not citations:
-            st.info("No citations found for this question.")
-            return
-        for idx, item in enumerate(citations):
-            with st.container(border=True):
-                st.markdown(f"**{item.get('title', 'Untitled')}**")
-                st.caption(
-                    f"{item.get('category', 'Other')} | {item.get('learning_mode', 'unknown')} | "
-                    f"{item.get('source_label', 'chunk')} | sim {float(item.get('similarity', 0.0) or 0.0):.3f}"
+
+    for turn_idx, turn in enumerate(st.session_state.get("rag-chat-history", [])):
+        question = str(turn.get("question", "") or "")
+        response = turn.get("response", {})
+        with st.chat_message("user"):
+            st.write(question)
+        with st.chat_message("assistant"):
+            _render_rag_chat_response(turn_idx=turn_idx, response=response, show_debug=show_debug)
+
+    pending_question = str(st.session_state.get("rag-pending-question", "") or "").strip()
+    prompt_value = st.chat_input("Ask a grounded question about your books")
+    query = str(prompt_value or "").strip() or pending_question
+    st.session_state["rag-pending-question"] = ""
+
+    if not query:
+        return
+
+    payload = _build_rag_answer_payload(
+        query=query,
+        top_k_chunks=int(top_k_chunks),
+        max_citations=int(max_citations),
+        selected_categories=selected_categories,
+        selected_modes=selected_modes,
+        min_similarity=float(min_similarity),
+        use_hybrid=bool(use_hybrid),
+        dense_weight=float(dense_weight),
+        lexical_weight=float(lexical_weight),
+        candidate_pool_size=int(candidate_pool_size),
+        reranker_enabled=bool(reranker_enabled),
+        reranker_model=str(reranker_model),
+        reranker_top_n=int(reranker_top_n),
+        generation_mode=generation_mode,
+        llama_model_path=str(llama_model_path),
+        llama_n_ctx=int(llama_n_ctx),
+        llama_max_tokens=int(llama_max_tokens),
+        llama_temp=float(llama_temp),
+        llama_top_p=float(llama_top_p),
+        llama_threads=int(llama_threads),
+        llama_gpu_layers=int(llama_gpu_layers),
+    )
+
+    with st.spinner("Generating grounded answer..."):
+        try:
+            if execution_mode == "API (/rag/answer)":
+                response = _call_rag_api_answer(
+                    api_url=str(api_answer_url).strip(),
+                    payload=payload,
+                    timeout_sec=int(api_timeout_sec),
                 )
-                st.write(str(item.get("snippet", "")))
-                if st.button("Open Source Location", key=f"rag-open-source-{idx}-{item.get('book_id', '')}"):
-                    ok, message = open_pdf_in_file_manager(str(item.get("absolute_path", "")))
-                    if ok:
-                        st.toast(message, icon="📂")
-                    else:
-                        st.warning(message)
+            else:
+                filters = RagFilters(
+                    categories=selected_categories or None,
+                    learning_modes=selected_modes or None,
+                    min_similarity=float(min_similarity),
+                )
+                retrieval_config = RetrievalConfig(
+                    hybrid_enabled=bool(use_hybrid),
+                    dense_weight=float(dense_weight),
+                    lexical_weight=float(lexical_weight),
+                    candidate_pool_size=int(candidate_pool_size),
+                    final_top_k=int(top_k_chunks),
+                    reranker_enabled=bool(reranker_enabled),
+                    reranker_model_name=str(reranker_model).strip() if reranker_enabled else None,
+                    reranker_top_n=int(reranker_top_n),
+                )
+                llm_config = LlamaCppConfig(
+                    enabled=generation_mode == "llama.cpp",
+                    model_path=str(llama_model_path).strip(),
+                    n_ctx=int(llama_n_ctx),
+                    max_tokens=int(llama_max_tokens),
+                    temperature=float(llama_temp),
+                    top_p=float(llama_top_p),
+                    n_threads=int(llama_threads),
+                    n_gpu_layers=int(llama_gpu_layers),
+                )
+                response = rag_service.answer_question(
+                    query=query,
+                    filters=filters,
+                    top_k=int(top_k_chunks),
+                    max_citations=int(max_citations),
+                    retrieval_config=retrieval_config,
+                    llm_config=llm_config,
+                )
+        except Exception as exc:
+            st.error(f"Could not generate answer: {exc}")
+            return
+
+    history = st.session_state.get("rag-chat-history", [])
+    history.append({"question": query, "response": response})
+    st.session_state["rag-chat-history"] = history[-30:]
+    st.rerun()
 
 
 def render_relationship_graph_page(
