@@ -42,6 +42,7 @@ category_order:
   - OperatingSystems
   - DistributedSystems
   - Go
+  - Python
   - Java
   - Math-Algebra
   - Math-Calculus
@@ -499,8 +500,21 @@ categories:
     - build in go
     - in go
     - go mistakes
+  Python:
+    - python
+    - python programming
+    - python language
+    - python for beginners
+    - learn python
+    - python crash course
+    - python cookbook
+    - python script
+    - python scripting
+    - python 3
   Java:
     - java
+    - java programming
+    - java language
     - jvm
     - spring boot
     - hibernate
