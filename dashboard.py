@@ -81,6 +81,44 @@ RAG_RETRIEVAL_PRESETS: Dict[str, Dict[str, Any]] = {
         "reranker_top_n": 24,
     },
 }
+RAG_PERFORMANCE_PROFILES: Dict[str, Dict[str, Any]] = {
+    "Fast": {
+        "generation_mode": "ollama",
+        "ollama_model": "qwen3.5:9b",
+        "ollama_num_ctx": 4096,
+        "ollama_temp": 0.15,
+        "ollama_top_p": 0.85,
+        "ollama_timeout_sec": 180,
+        "top_k_chunks": 4,
+        "max_citations": 3,
+        "candidate_pool_size": 24,
+        "min_similarity": 0.2,
+    },
+    "Balanced": {
+        "generation_mode": "ollama",
+        "ollama_model": "qwen3.5:9b",
+        "ollama_num_ctx": 6144,
+        "ollama_temp": 0.2,
+        "ollama_top_p": 0.9,
+        "ollama_timeout_sec": 240,
+        "top_k_chunks": 6,
+        "max_citations": 4,
+        "candidate_pool_size": 40,
+        "min_similarity": 0.12,
+    },
+    "Quality": {
+        "generation_mode": "ollama",
+        "ollama_model": "qwen3.5:27b",
+        "ollama_num_ctx": 8192,
+        "ollama_temp": 0.2,
+        "ollama_top_p": 0.9,
+        "ollama_timeout_sec": 360,
+        "top_k_chunks": 8,
+        "max_citations": 6,
+        "candidate_pool_size": 64,
+        "min_similarity": 0.08,
+    },
+}
 
 
 @st.cache_resource
@@ -1100,6 +1138,22 @@ def _apply_rag_retrieval_preset(preset_name: str) -> None:
     st.session_state["rag-reranker-topn"] = int(preset["reranker_top_n"])
 
 
+def _apply_rag_performance_profile(profile_name: str) -> None:
+    profile = RAG_PERFORMANCE_PROFILES.get(profile_name)
+    if not profile:
+        return
+    st.session_state["rag-generation-mode"] = str(profile["generation_mode"])
+    st.session_state["rag-ollama-model"] = str(profile["ollama_model"])
+    st.session_state["rag-ollama-num-ctx"] = int(profile["ollama_num_ctx"])
+    st.session_state["rag-ollama-temp"] = float(profile["ollama_temp"])
+    st.session_state["rag-ollama-top-p"] = float(profile["ollama_top_p"])
+    st.session_state["rag-ollama-timeout"] = int(profile["ollama_timeout_sec"])
+    st.session_state["rag-top-k-chunks"] = int(profile["top_k_chunks"])
+    st.session_state["rag-max-citations"] = int(profile["max_citations"])
+    st.session_state["rag-candidate-pool"] = int(profile["candidate_pool_size"])
+    st.session_state["rag-min-similarity"] = float(profile["min_similarity"])
+
+
 def _build_rag_answer_payload(
     query: str,
     top_k_chunks: int,
@@ -1342,6 +1396,18 @@ def render_ask_books_rag_page(
             st.session_state["rag-chat-history"] = []
             st.session_state["rag-pending-question"] = ""
             st.rerun()
+
+    profile_names = list(RAG_PERFORMANCE_PROFILES.keys())
+    selected_profile = st.selectbox(
+        "Performance profile",
+        options=profile_names,
+        index=1,
+        key="rag-performance-profile",
+        help="Fast uses a smaller model and tighter context. Quality uses qwen3.5:27b for deeper but slower answers.",
+    )
+    if st.button("Apply performance profile", key="rag-apply-performance-profile"):
+        _apply_rag_performance_profile(selected_profile)
+        st.rerun()
 
     _render_rag_perf_rollup(st.session_state.get("rag-chat-history", []), window=10)
 
