@@ -11,7 +11,7 @@ import time
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 try:
@@ -364,6 +364,7 @@ class RagService:
         retrieval_config: Optional[RetrievalConfig] = None,
         llm_config: Optional[LlamaCppConfig] = None,
         ollama_config: Optional[OllamaConfig] = None,
+        on_token: Optional[Callable[[str], None]] = None,
     ) -> Dict[str, Any]:
         total_started = time.perf_counter()
         retrieval_started = time.perf_counter()
@@ -417,7 +418,10 @@ class RagService:
                 fallback_reason = "No generation backend enabled or available."
             else:
                 generation_started = time.perf_counter()
-                result = generator.generate(prompt)
+                if on_token is None:
+                    result = generator.generate(prompt)
+                else:
+                    result = generator.generate(prompt, on_token=on_token)
                 generation_ms = round((time.perf_counter() - generation_started) * 1000.0, 2)
                 known_citations = {str(item["citation_id"]) for item in citations}
                 if result.error:

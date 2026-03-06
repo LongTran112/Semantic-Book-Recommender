@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from functools import lru_cache
 from pathlib import Path
+from queue import Queue
+import threading
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from semantic_books.langchain_adapter import (
@@ -328,3 +332,45 @@ def rag_answer_langchain(request: RagRequest) -> AnswerResponse:
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"LangChain answer failed: {exc}") from exc
+
+
+@app.post("/rag/answer-stream")
+def rag_answer_stream(request: RagRequest) -> StreamingResponse:
+    rag_service = get_rag_service()
+    filters = _build_filters(request.filters)
+    retrieval = _build_retrieval_config(request.retrieval, request.top_k)
+    llm = _build_llm_config(request.llm)
+    ollama = _build_ollama_config(request.ollama)
+    events: "Queue[Optional[Dict[str, Any]]]" = Queue()
+
+    def _on_token(token: str) -> None:
+        events.put({"type": "token", "token": token})
+
+    def _worker() -> None:
+        try:
+            response = rag_service.answer_question(
+                query=request.query.strip(),
+                filters=filters,
+                top_k=int(request.top_k),
+                max_citations=int(request.max_citations),
+                retrieval_config=retrieval,
+                llm_config=llm,
+                ollama_config=ollama,
+                on_token=_on_token if bool(ollama.enabled or llm.enabled) else None,
+            )
+            events.put({"type": "final", "response": response})
+        except Exception as exc:
+            events.put({"type": "error", "error": str(exc)})
+        finally:
+            events.put(None)
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+    def _event_generator():
+        while True:
+            item = events.get()
+            if item is None:
+                break
+            yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(_event_generator(), media_type="text/event-stream")

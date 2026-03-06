@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import re
-from typing import Optional, Protocol
+from typing import Callable, Optional, Protocol
 import urllib.error
 import urllib.request
 
@@ -18,7 +18,11 @@ except ImportError:  # pragma: no cover - optional dependency
 
 
 class GeneratorBackend(Protocol):
-    def generate(self, prompt: str) -> "GenerationResult":
+    def generate(
+        self,
+        prompt: str,
+        on_token: Optional[Callable[[str], None]] = None,
+    ) -> "GenerationResult":
         """Generate plain text from prompt."""
 
 
@@ -62,7 +66,11 @@ class LlamaCppGenerator:
             self._llm = None
             return False
 
-    def generate(self, prompt: str) -> GenerationResult:
+    def generate(
+        self,
+        prompt: str,
+        on_token: Optional[Callable[[str], None]] = None,
+    ) -> GenerationResult:
         if not self._ensure_model():
             return GenerationResult(text="", backend="llama.cpp", error=self._last_error)
         if self._llm is None:
@@ -79,6 +87,8 @@ class LlamaCppGenerator:
             choices = output.get("choices") if isinstance(output, dict) else None
             if isinstance(choices, list) and choices:
                 text = str(choices[0].get("text", "") or "").strip()
+            if on_token is not None and text:
+                on_token(text)
             return GenerationResult(text=text, backend="llama.cpp")
         except Exception as exc:  # pragma: no cover - runtime specific
             return GenerationResult(text="", backend="llama.cpp", error=f"Generation failed: {exc}")
@@ -102,11 +112,15 @@ class OllamaGenerator:
             clean = re.sub(pattern, "", clean).strip()
         return clean
 
-    def generate(self, prompt: str) -> GenerationResult:
+    def generate(
+        self,
+        prompt: str,
+        on_token: Optional[Callable[[str], None]] = None,
+    ) -> GenerationResult:
         payload = {
             "model": str(self.cfg.model).strip(),
             "prompt": prompt,
-            "stream": False,
+            "stream": bool(on_token is not None),
             "options": {
                 "temperature": max(0.0, float(self.cfg.temperature)),
                 "top_p": max(0.0, min(1.0, float(self.cfg.top_p))),
@@ -123,11 +137,28 @@ class OllamaGenerator:
         )
         try:
             with urllib.request.urlopen(request, timeout=max(3, int(self.cfg.timeout_sec))) as response:
-                body = response.read().decode("utf-8", errors="replace")
-            data = json.loads(body) if body.strip() else {}
-            if not isinstance(data, dict):
-                return GenerationResult(text="", backend="ollama", error="Invalid Ollama response format.")
-            raw_text = str(data.get("response", "") or "").strip()
+                if on_token is None:
+                    body = response.read().decode("utf-8", errors="replace")
+                    data = json.loads(body) if body.strip() else {}
+                    if not isinstance(data, dict):
+                        return GenerationResult(text="", backend="ollama", error="Invalid Ollama response format.")
+                    raw_text = str(data.get("response", "") or "").strip()
+                else:
+                    parts = []
+                    for raw_line in response:
+                        line = raw_line.decode("utf-8", errors="replace").strip()
+                        if not line:
+                            continue
+                        item = json.loads(line)
+                        if not isinstance(item, dict):
+                            continue
+                        token = str(item.get("response", "") or "")
+                        if token:
+                            parts.append(token)
+                            on_token(token)
+                        if bool(item.get("done")):
+                            break
+                    raw_text = "".join(parts).strip()
             text = self._strip_thinking_sections(raw_text)
             return GenerationResult(text=text, backend="ollama")
         except urllib.error.HTTPError as exc:
