@@ -1665,26 +1665,47 @@ def render_ask_books_rag_page(
     if not query:
         return
 
+    effective_top_k_chunks = int(top_k_chunks)
+    effective_max_citations = int(max_citations)
+    effective_min_similarity = float(min_similarity)
+    effective_candidate_pool_size = int(candidate_pool_size)
+    effective_generation_mode = str(generation_mode)
+    effective_ollama_model = str(ollama_model)
+    effective_ollama_num_ctx = int(ollama_num_ctx)
+    effective_ollama_temp = float(ollama_temp)
+    effective_ollama_top_p = float(ollama_top_p)
+    effective_ollama_timeout_sec = int(ollama_timeout_sec)
+
     if bool(st.session_state.get("rag-auto-profile-enabled", False)):
         auto_profile = _select_rag_auto_profile(query)
-        _apply_rag_performance_profile(auto_profile)
+        profile = RAG_PERFORMANCE_PROFILES.get(auto_profile, {})
+        effective_top_k_chunks = int(profile.get("top_k_chunks", effective_top_k_chunks))
+        effective_max_citations = int(profile.get("max_citations", effective_max_citations))
+        effective_min_similarity = float(profile.get("min_similarity", effective_min_similarity))
+        effective_candidate_pool_size = int(profile.get("candidate_pool_size", effective_candidate_pool_size))
+        effective_generation_mode = str(profile.get("generation_mode", effective_generation_mode))
+        effective_ollama_model = str(profile.get("ollama_model", effective_ollama_model))
+        effective_ollama_num_ctx = int(profile.get("ollama_num_ctx", effective_ollama_num_ctx))
+        effective_ollama_temp = float(profile.get("ollama_temp", effective_ollama_temp))
+        effective_ollama_top_p = float(profile.get("ollama_top_p", effective_ollama_top_p))
+        effective_ollama_timeout_sec = int(profile.get("ollama_timeout_sec", effective_ollama_timeout_sec))
         st.caption(f"Auto profile selected: {auto_profile}")
 
     payload = _build_rag_answer_payload(
         query=query,
-        top_k_chunks=int(top_k_chunks),
-        max_citations=int(max_citations),
+        top_k_chunks=effective_top_k_chunks,
+        max_citations=effective_max_citations,
         selected_categories=selected_categories,
         selected_modes=selected_modes,
-        min_similarity=float(min_similarity),
+        min_similarity=effective_min_similarity,
         use_hybrid=bool(use_hybrid),
         dense_weight=float(dense_weight),
         lexical_weight=float(lexical_weight),
-        candidate_pool_size=int(candidate_pool_size),
+        candidate_pool_size=effective_candidate_pool_size,
         reranker_enabled=bool(reranker_enabled),
         reranker_model=str(reranker_model),
         reranker_top_n=int(reranker_top_n),
-        generation_mode=generation_mode,
+        generation_mode=effective_generation_mode,
         llama_model_path=str(llama_model_path),
         llama_n_ctx=int(llama_n_ctx),
         llama_max_tokens=int(llama_max_tokens),
@@ -1693,11 +1714,11 @@ def render_ask_books_rag_page(
         llama_threads=int(llama_threads),
         llama_gpu_layers=int(llama_gpu_layers),
         ollama_base_url=str(ollama_base_url),
-        ollama_model=str(ollama_model),
-        ollama_temp=float(ollama_temp),
-        ollama_top_p=float(ollama_top_p),
-        ollama_num_ctx=int(ollama_num_ctx),
-        ollama_timeout_sec=int(ollama_timeout_sec),
+        ollama_model=effective_ollama_model,
+        ollama_temp=effective_ollama_temp,
+        ollama_top_p=effective_ollama_top_p,
+        ollama_num_ctx=effective_ollama_num_ctx,
+        ollama_timeout_sec=effective_ollama_timeout_sec,
     )
 
     with st.spinner("Generating grounded answer..."):
@@ -1713,20 +1734,20 @@ def render_ask_books_rag_page(
                 filters = RagFilters(
                     categories=selected_categories or None,
                     learning_modes=selected_modes or None,
-                    min_similarity=float(min_similarity),
+                    min_similarity=effective_min_similarity,
                 )
                 retrieval_config = RetrievalConfig(
                     hybrid_enabled=bool(use_hybrid),
                     dense_weight=float(dense_weight),
                     lexical_weight=float(lexical_weight),
-                    candidate_pool_size=int(candidate_pool_size),
-                    final_top_k=int(top_k_chunks),
+                    candidate_pool_size=effective_candidate_pool_size,
+                    final_top_k=effective_top_k_chunks,
                     reranker_enabled=bool(reranker_enabled),
                     reranker_model_name=str(reranker_model).strip() if reranker_enabled else None,
                     reranker_top_n=int(reranker_top_n),
                 )
                 llm_config = LlamaCppConfig(
-                    enabled=generation_mode == "llama.cpp",
+                    enabled=effective_generation_mode == "llama.cpp",
                     model_path=str(llama_model_path).strip(),
                     n_ctx=int(llama_n_ctx),
                     max_tokens=int(llama_max_tokens),
@@ -1736,16 +1757,16 @@ def render_ask_books_rag_page(
                     n_gpu_layers=int(llama_gpu_layers),
                 )
                 ollama_config = OllamaConfig(
-                    enabled=generation_mode == "ollama",
+                    enabled=effective_generation_mode == "ollama",
                     base_url=str(ollama_base_url).strip(),
-                    model=str(ollama_model).strip(),
-                    temperature=float(ollama_temp),
-                    top_p=float(ollama_top_p),
-                    num_ctx=int(ollama_num_ctx),
-                    timeout_sec=int(ollama_timeout_sec),
+                    model=effective_ollama_model.strip(),
+                    temperature=effective_ollama_temp,
+                    top_p=effective_ollama_top_p,
+                    num_ctx=effective_ollama_num_ctx,
+                    timeout_sec=effective_ollama_timeout_sec,
                 )
-                stream_placeholder = st.empty() if generation_mode == "ollama" else None
-                stream_status_placeholder = st.empty() if generation_mode == "ollama" else None
+                stream_placeholder = st.empty() if effective_generation_mode == "ollama" else None
+                stream_status_placeholder = st.empty() if effective_generation_mode == "ollama" else None
 
                 def _on_token(token: str) -> None:
                     nonlocal streamed_text
@@ -1758,12 +1779,12 @@ def render_ask_books_rag_page(
                 response = rag_service.answer_question(
                     query=query,
                     filters=filters,
-                    top_k=int(top_k_chunks),
-                    max_citations=int(max_citations),
+                    top_k=effective_top_k_chunks,
+                    max_citations=effective_max_citations,
                     retrieval_config=retrieval_config,
                     llm_config=llm_config,
                     ollama_config=ollama_config,
-                    on_token=_on_token if generation_mode == "ollama" else None,
+                    on_token=_on_token if effective_generation_mode == "ollama" else None,
                 )
                 if stream_placeholder is not None:
                     stream_placeholder.empty()
