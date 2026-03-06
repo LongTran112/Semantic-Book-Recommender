@@ -119,6 +119,9 @@ RAG_PERFORMANCE_PROFILES: Dict[str, Dict[str, Any]] = {
         "min_similarity": 0.08,
     },
 }
+RAG_LATENCY_TARGET_MS = 25000.0
+RAG_AUTO_FAST_MAX_QUERY_CHARS = 120
+RAG_AUTO_BALANCED_MAX_QUERY_CHARS = 260
 
 
 @st.cache_resource
@@ -1154,6 +1157,28 @@ def _apply_rag_performance_profile(profile_name: str) -> None:
     st.session_state["rag-min-similarity"] = float(profile["min_similarity"])
 
 
+def _select_rag_auto_profile(query: str) -> str:
+    q = str(query or "").strip().lower()
+    if not q:
+        return "Balanced"
+    definition_markers = ("what is ", "define ", "definition of ", "meaning of ")
+    complex_markers = (
+        "compare ",
+        "difference",
+        "tradeoff",
+        "pros and cons",
+        "architecture",
+        "design",
+        "deep dive",
+        "comprehensive",
+    )
+    if any(marker in q for marker in definition_markers) and len(q) <= RAG_AUTO_FAST_MAX_QUERY_CHARS:
+        return "Fast"
+    if any(marker in q for marker in complex_markers) or len(q) > RAG_AUTO_BALANCED_MAX_QUERY_CHARS:
+        return "Quality"
+    return "Balanced"
+
+
 def _build_rag_answer_payload(
     query: str,
     top_k_chunks: int,
@@ -1397,16 +1422,23 @@ def render_ask_books_rag_page(
             st.session_state["rag-pending-question"] = ""
             st.rerun()
 
-    profile_names = list(RAG_PERFORMANCE_PROFILES.keys())
+    profile_names = ["Auto"] + list(RAG_PERFORMANCE_PROFILES.keys())
     selected_profile = st.selectbox(
         "Performance profile",
         options=profile_names,
-        index=1,
+        index=0,
         key="rag-performance-profile",
-        help="Fast uses a smaller model and tighter context. Quality uses qwen3.5:27b for deeper but slower answers.",
+        help=(
+            "Auto routes query complexity to Fast/Balanced/Quality. "
+            f"Target interactive latency: <= {int(RAG_LATENCY_TARGET_MS)} ms."
+        ),
     )
     if st.button("Apply performance profile", key="rag-apply-performance-profile"):
-        _apply_rag_performance_profile(selected_profile)
+        if selected_profile == "Auto":
+            st.session_state["rag-auto-profile-enabled"] = True
+        else:
+            st.session_state["rag-auto-profile-enabled"] = False
+            _apply_rag_performance_profile(selected_profile)
         st.rerun()
 
     _render_rag_perf_rollup(st.session_state.get("rag-chat-history", []), window=10)
@@ -1632,6 +1664,11 @@ def render_ask_books_rag_page(
 
     if not query:
         return
+
+    if bool(st.session_state.get("rag-auto-profile-enabled", False)):
+        auto_profile = _select_rag_auto_profile(query)
+        _apply_rag_performance_profile(auto_profile)
+        st.caption(f"Auto profile selected: {auto_profile}")
 
     payload = _build_rag_answer_payload(
         query=query,
