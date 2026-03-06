@@ -50,30 +50,33 @@ DEFAULT_DAILY_RECOMMENDATIONS_PATH = Path("./output/daily_recommendations.json")
 DEFAULT_CURRENT_READ_BOOKS_DIR = Path("./current-read-books")
 NOTEBOOKLM_URL = "https://notebooklm.google.com"
 RAG_RETRIEVAL_PRESETS: Dict[str, Dict[str, Any]] = {
-    "Balanced": {
-        "top_k_chunks": 8,
+    "Definition Q&A": {
+        "top_k_chunks": 4,
+        "min_similarity": 0.15,
+        "use_hybrid": True,
+        "dense_weight": 0.6,
+        "lexical_weight": 0.4,
+        "candidate_pool_size": 32,
+        "reranker_enabled": True,
+        "reranker_top_n": 16,
+    },
+    "Concept Compare": {
+        "top_k_chunks": 6,
+        "min_similarity": 0.1,
         "use_hybrid": True,
         "dense_weight": 0.7,
         "lexical_weight": 0.3,
         "candidate_pool_size": 48,
-        "reranker_enabled": False,
+        "reranker_enabled": True,
         "reranker_top_n": 24,
     },
-    "Precision": {
-        "top_k_chunks": 6,
+    "Learning Path": {
+        "top_k_chunks": 8,
+        "min_similarity": 0.05,
         "use_hybrid": True,
-        "dense_weight": 0.8,
-        "lexical_weight": 0.2,
-        "candidate_pool_size": 40,
-        "reranker_enabled": True,
-        "reranker_top_n": 20,
-    },
-    "Recall": {
-        "top_k_chunks": 12,
-        "use_hybrid": True,
-        "dense_weight": 0.6,
-        "lexical_weight": 0.4,
-        "candidate_pool_size": 72,
+        "dense_weight": 0.75,
+        "lexical_weight": 0.25,
+        "candidate_pool_size": 64,
         "reranker_enabled": False,
         "reranker_top_n": 24,
     },
@@ -1088,6 +1091,7 @@ def _apply_rag_retrieval_preset(preset_name: str) -> None:
     if not preset:
         return
     st.session_state["rag-top-k-chunks"] = int(preset["top_k_chunks"])
+    st.session_state["rag-min-similarity"] = float(preset["min_similarity"])
     st.session_state["rag-hybrid-enabled"] = bool(preset["use_hybrid"])
     st.session_state["rag-dense-weight"] = float(preset["dense_weight"])
     st.session_state["rag-lexical-weight"] = float(preset["lexical_weight"])
@@ -1265,9 +1269,9 @@ def render_ask_books_rag_page(
 
     st.subheader("Conversation Controls")
     preset_names = list(RAG_RETRIEVAL_PRESETS.keys())
-    default_preset_name = str(st.session_state.get("rag-pinned-preset", "") or "Balanced")
+    default_preset_name = str(st.session_state.get("rag-pinned-preset", "") or "Definition Q&A")
     if default_preset_name not in RAG_RETRIEVAL_PRESETS:
-        default_preset_name = "Balanced"
+        default_preset_name = "Definition Q&A"
     preset_idx = preset_names.index(default_preset_name)
     chosen_preset = st.selectbox(
         "Retrieval preset",
@@ -1301,7 +1305,7 @@ def render_ask_books_rag_page(
         "Min chunk similarity",
         min_value=-1.0,
         max_value=1.0,
-        value=0.0,
+        value=0.15,
         step=0.01,
         key="rag-min-similarity",
     )
@@ -1484,8 +1488,8 @@ def render_ask_books_rag_page(
     ollama_timeout_sec = st.slider(
         "Ollama timeout (seconds)",
         min_value=5,
-        max_value=180,
-        value=45,
+        max_value=600,
+        value=180,
         step=5,
         key="rag-ollama-timeout",
         disabled=generation_mode != "ollama",

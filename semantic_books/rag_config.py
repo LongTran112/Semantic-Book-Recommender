@@ -46,7 +46,7 @@ class OllamaConfig:
     temperature: float = 0.2
     top_p: float = 0.9
     num_ctx: int = 8192
-    timeout_sec: int = 45
+    timeout_sec: int = 180
 
     def resolved_base_url(self) -> str:
         value = str(self.base_url or "").strip().rstrip("/")

@@ -311,6 +311,8 @@ class RagService:
             "1) Be concise and factual.\n"
             "2) Cite claims with markers like [C1], [C2].\n"
             "3) Do not invent sources.\n\n"
+            "4) Prefer citations that match the question domain. Avoid tangential domains unless explicitly asked.\n"
+            "5) If asked for bullets, return exactly the requested number of bullets.\n\n"
             f"Question: {query.strip()}\n\n"
             f"Context:\n{context}\n\n"
             "Return format:\n"
