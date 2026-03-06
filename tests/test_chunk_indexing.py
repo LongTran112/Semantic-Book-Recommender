@@ -26,6 +26,9 @@ class ChunkIndexingTests(unittest.TestCase):
         self.assertEqual(sample.book_id, "b1")
         self.assertIn(sample.source_type, {"metadata", "body_preview"})
         self.assertGreater(sample.end_char, sample.start_char)
+        self.assertGreaterEqual(sample.chunk_order, 0)
+        self.assertGreater(sample.chunk_len, 0)
+        self.assertTrue(sample.section_label)
         self.assertTrue(sample.chunk_text.strip())
 
 

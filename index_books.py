@@ -373,6 +373,9 @@ class ChunkRecord:
     source_index: int
     start_char: int
     end_char: int
+    chunk_order: int
+    chunk_len: int
+    section_label: str
     chunk_text: str
 
 
@@ -753,6 +756,7 @@ def build_semantic_chunks(
 
         for source_type, source_text in sections:
             total = len(source_text)
+            chunk_order = 0
             for start_char in range(0, total, step):
                 end_char = min(total, start_char + safe_chunk_size)
                 if end_char <= start_char:
@@ -760,6 +764,7 @@ def build_semantic_chunks(
                 chunk_text = source_text[start_char:end_char].strip()
                 if len(chunk_text) < 40:
                     continue
+                chunk_len = max(0, end_char - start_char)
                 chunk_id = hashlib.sha1(
                     f"{record.book_id}:{source_type}:{start_char}:{end_char}".encode("utf-8")
                 ).hexdigest()[:16]
@@ -772,12 +777,16 @@ def build_semantic_chunks(
                         learning_mode=record.learning_mode,
                         absolute_path=record.absolute_path,
                         source_type=source_type,
-                        source_index=0,
+                        source_index=chunk_order,
                         start_char=start_char,
                         end_char=end_char,
+                        chunk_order=chunk_order,
+                        chunk_len=chunk_len,
+                        section_label=source_type,
                         chunk_text=chunk_text,
                     )
                 )
+                chunk_order += 1
                 if end_char >= total:
                     break
     return chunks
@@ -798,6 +807,9 @@ def write_semantic_chunks_jsonl(chunks: Sequence[ChunkRecord], output_path: Path
                 "source_index": chunk.source_index,
                 "start_char": chunk.start_char,
                 "end_char": chunk.end_char,
+                "chunk_order": chunk.chunk_order,
+                "chunk_len": chunk.chunk_len,
+                "section_label": chunk.section_label,
                 "chunk_text": chunk.chunk_text,
             }
             safe_payload = sanitize_json_value(payload)

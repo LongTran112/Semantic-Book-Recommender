@@ -62,6 +62,9 @@ def build_embedding_text(record: Dict[str, Any]) -> str:
             str(record.get("category", "") or ""),
             str(record.get("learning_mode", "") or ""),
             str(record.get("source_type", "") or ""),
+            str(record.get("section_label", "") or ""),
+            str(record.get("chunk_order", "") or ""),
+            str(record.get("chunk_len", "") or ""),
             str(record.get("chunk_text", "") or ""),
         ]
         return "\n".join(part for part in parts if part.strip())
