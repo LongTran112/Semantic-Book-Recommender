@@ -269,6 +269,19 @@ class RagService:
         return scored
 
     @staticmethod
+    def _is_definition_query(query: str) -> bool:
+        q = str(query or "").strip().lower()
+        if not q:
+            return False
+        definition_markers = [
+            "what is ",
+            "define ",
+            "definition of ",
+            "meaning of ",
+        ]
+        return any(marker in q for marker in definition_markers)
+
+    @staticmethod
     def _build_follow_ups() -> List[str]:
         return [
             "Compare these sources by theoretical depth and practical exercises.",
@@ -308,6 +321,24 @@ class RagService:
                 f"{c['source_label']} :: {c['snippet']}"
             )
         context = "\n".join(context_lines)
+        if RagService._is_definition_query(query):
+            return (
+                "You answer questions using only provided context.\n"
+                "Rules:\n"
+                "1) Return exactly 3 bullet points.\n"
+                "2) Bullet 1: formal definition or formula.\n"
+                "3) Bullet 2: plain-language intuition.\n"
+                "4) Bullet 3: one practical use-case.\n"
+                "5) Cite each bullet with markers like [C1], [C2].\n"
+                "6) Do not invent sources.\n"
+                "7) If context is insufficient for a direct definition, output:\n"
+                "   'Insufficient grounded definition in provided sources.' and then 2 cited snippets.\n\n"
+                f"Question: {query.strip()}\n\n"
+                f"Context:\n{context}\n\n"
+                "Return format:\n"
+                "Answer: <exactly 3 bullet points, each with citations>\n"
+                "SourcesUsed: <comma-separated citation ids>\n"
+            )
         return (
             "You answer questions using only provided context.\n"
             "Rules:\n"
@@ -396,6 +427,8 @@ class RagService:
             }
 
         citations = self._build_citations(chunks, max_citations=max_citations)
+        definition_query = self._is_definition_query(query)
+        top_similarity = max(float(item.get("similarity", 0.0) or 0.0) for item in chunks) if chunks else 0.0
         categories = sorted({str(item.get("category", "Other")) for item in chunks[: max(1, min(6, len(chunks)))]})
         summary = (
             f"Grounded from {len(chunks)} retrieved chunks across {len(categories)} categories: "
@@ -410,7 +443,16 @@ class RagService:
         ollama_cfg = ollama_config or OllamaConfig()
         generation_ms = 0.0
         prompt_chars = 0
-        if generation_cfg.enabled or ollama_cfg.enabled:
+        if definition_query and top_similarity < 0.55:
+            snippet_lines = []
+            for idx, item in enumerate(citations[:2], start=1):
+                snippet_lines.append(f"- {item.get('snippet', '')} [{item.get('citation_id', f'C{idx}')}]")
+            generated_answer = (
+                "Answer: Insufficient grounded definition in provided sources.\n"
+                + "\n".join(snippet_lines)
+            )
+            fallback_reason = "Definition query had weak retrieval similarity; returned grounded snippets."
+        if (generation_cfg.enabled or ollama_cfg.enabled) and not generated_answer:
             prompt = self._build_generation_prompt(query=query, citations=citations)
             prompt_chars = len(prompt)
             generator = create_generator(llama_cfg=generation_cfg, ollama_cfg=ollama_cfg)
