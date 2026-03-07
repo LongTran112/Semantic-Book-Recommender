@@ -1,4 +1,4 @@
-# Semantic-Book-Recommender
+# BookMap RAG
 
 Non-destructive technical PDF/EPUB categorizer and index generator.
 
@@ -253,12 +253,12 @@ For local generator mode (`llama.cpp`):
 - Set model path in the Ask page and switch to `Answer mode = llama.cpp`.
 - If citations are invalid or runtime fails, dashboard falls back to deterministic grounded output.
 
-For local generator mode (`ollama` + `deepseek-r1-local:latest`):
+For local generator mode (`ollama` + `deepseek-r1:14b`):
 
 - Install and start Ollama locally.
-- Pull a model once: `ollama pull deepseek-r1-local:latest`.
-- Verify runtime: `ollama run deepseek-r1-local:latest "hi there"`.
-- In Ask Books, set `Answer mode = ollama`, keep base URL `http://127.0.0.1:11434`, and set model tag `deepseek-r1-local:latest`.
+- Pull a model once: `ollama pull deepseek-r1:14b`.
+- Verify runtime: `ollama run deepseek-r1:14b "hi there"`.
+- In Ask Books, set `Answer mode = ollama`, keep base URL `http://127.0.0.1:11434`, and set model tag `deepseek-r1:14b`.
 - If output quality is weak, reduce temperature and increase context window.
 
 ## Launch RAG API (FastAPI)
@@ -370,7 +370,7 @@ For large libraries, keep the graph responsive with:
 - **Dashboard cannot load index**: rerun indexing and semantic build commands, then verify files in `output/semantic_index/`.
 - **Ask Books (RAG) cannot load**: build chunk index and verify files in `output/semantic_index_chunks/`.
 - **llama.cpp mode falls back to deterministic**: verify `llama-cpp-python` is installed, model path exists, and answer includes citation markers like `[C1]`.
-- **ollama mode fails**: confirm `ollama run deepseek-r1-local:latest "hi"` works first, then verify base URL/model tag in the Ask Books page.
+- **ollama mode fails**: confirm `ollama run deepseek-r1:14b "hi"` works first, then verify base URL/model tag in the Ask Books page.
 - **RAG API returns 401**: ensure `RAG_API_KEY` is set on server and send `X-API-Key` header.
 - **RAG API returns 429**: reduce request burst, increase `RAG_RATE_LIMIT_MAX_REQUESTS`, or tune `RAG_RATE_LIMIT_WINDOW_SEC` for trusted internal load.
 - **Relationship graph is dense/slow**: reduce max nodes, increase min edge similarity, or lower neighbors per node.
