@@ -1,6 +1,6 @@
 # BookMap RAG
 
-Non-destructive technical PDF/EPUB categorizer and index generator.
+Technical PDF/EPUB library explorer with grounded RAG Q&A.
 
 ## What it does
 
@@ -8,11 +8,13 @@ Non-destructive technical PDF/EPUB categorizer and index generator.
 - Infers one category per file from:
   - filename,
   - PDF/EPUB metadata (title/subject/keywords/author where available),
-  - extracted text from the first N pages.
+  - extracted text from configurable body sampling/chunks.
 - Generates:
   - `output/books_by_category.md`
   - `output/books_by_category.csv`
   - `output/semantic_source.jsonl` (semantic-search source records)
+  - `output/semantic_chunks.jsonl` (chunk-level RAG source records)
+- Powers a Streamlit app with semantic search, relationship graph, and Ask Books grounded answers.
 
 No files are moved, renamed, or deleted.
 
@@ -220,31 +222,35 @@ Dashboard features:
 - Book cover thumbnails (first-page preview, cached locally)
 - Book detail view with related book recommendations
 - Ask Books (RAG) page for grounded Q&A with citations from local chunks
+- RAG Metrics page with in-memory charts for the last 10 answers + CSV export
+- Daily Recommendations page
 - Relationship Graph page (Obsidian-style) with whole-library and focused graph modes
 
 Streamlit is the primary frontend for this project. FastAPI endpoints are optional and mainly for external integrations/parity checks.
 
-### Ask Books Phase 2 Controls
+### Ask Books (RAG) Current Controls
 
-The `Ask Books (RAG)` page now supports two major upgrade paths:
+The `Ask Books (RAG)` page includes:
 
-- **Path A (Retriever upgrade):** hybrid retrieval (`dense + lexical`), candidate pool tuning, and optional reranker.
-- **Path B (Generator upgrade):** local `llama.cpp` answering with strict citation checks and automatic deterministic fallback.
-
-It also supports a Streamlit-first chat workflow:
-
-- Persistent chat history using chat bubbles.
-- One-click follow-up prompts from each answer.
-- Citation cards in expandable sections, with source-open actions.
-- Retrieval presets (`Balanced`, `Precision`, `Recall`) with pin/unpin and clear-chat controls.
-- Optional execution mode toggle between direct local RAG and FastAPI `/rag/answer`.
+- Streamlit chat-style interaction with persistent session history.
+- Retrieval presets: `Definition Q&A`, `Concept Compare`, `Learning Path`.
+- Performance profiles: `Auto`, `Fast`, `Balanced`, `Quality`.
+- Execution path switch: direct local RagService or FastAPI `/rag/answer`.
+- Hybrid retrieval (`dense + lexical`) tuning + reranker controls.
+- Generation backends: `deterministic`, `llama.cpp`, `ollama`.
+- Meta-text controls:
+  - hide model thinking/meta text
+  - show/hide fallback notices
+  - disable deterministic fallback (advanced)
+- Recent performance rollup in Ask Books sidebar.
+- Separate `RAG Metrics` page for last-10 in-memory charts and CSV download.
 
 Recommended first pass:
 
-- Keep `Answer mode = deterministic`.
-- Enable hybrid retrieval.
-- Start with `dense=0.7`, `lexical=0.3`, candidate pool `48`.
-- Turn on reranker only after baseline works.
+- Keep `Performance profile = Auto` and `Answer mode = ollama`.
+- Use default Ollama model `deepseek-r1:14b`.
+- Enable hybrid retrieval and reranker.
+- Keep deterministic fallback enabled for production-like reliability (`Disable deterministic fallback` toggle should be OFF).
 
 For local generator mode (`llama.cpp`):
 
@@ -258,7 +264,7 @@ For local generator mode (`ollama` + `deepseek-r1:14b`):
 - Install and start Ollama locally.
 - Pull a model once: `ollama pull deepseek-r1:14b`.
 - Verify runtime: `ollama run deepseek-r1:14b "hi there"`.
-- In Ask Books, set `Answer mode = ollama`, keep base URL `http://127.0.0.1:11434`, and set model tag `deepseek-r1:14b`.
+- In Ask Books, keep base URL `http://127.0.0.1:11434`, `Answer mode = ollama`, and model tag `deepseek-r1:14b`.
 - If output quality is weak, reduce temperature and increase context window.
 
 ## Launch RAG API (FastAPI)
@@ -356,13 +362,14 @@ For large libraries, keep the graph responsive with:
 6. Open a book detail and check related books are shown.
 7. Open Ask Books (RAG), ask a question, and confirm citation snippets are returned.
 8. In Ask Books, enable hybrid retrieval and verify results change with dense/lexical weights.
-9. In Ask Books, test `llama.cpp` mode and verify answers include citation markers (or fallback message appears).
-10. Open Relationship Graph and confirm node selection + actions work.
-11. Start FastAPI server and call `/health`.
-12. Call `/rag/answer` with `X-API-Key` and verify citations + generation mode in JSON response.
-13. Send burst requests and verify rate-limit response (`429`) appears after threshold.
-14. Verify API responses do not expose local filesystem paths in citation/chunk payloads.
-15. Optionally call `/rag/answer-lc` and verify fallback behavior when citations are invalid.
+9. In Ask Books, test `ollama` mode and verify answers include citations or valid fallback behavior.
+10. Open `RAG Metrics` page and verify last-10 charts/table populate after Ask Books responses.
+11. Open Relationship Graph and confirm node selection + actions work.
+12. Start FastAPI server and call `/health`.
+13. Call `/rag/answer` with `X-API-Key` and verify citations + generation mode in JSON response.
+14. Send burst requests and verify rate-limit response (`429`) appears after threshold.
+15. Verify API responses do not expose local filesystem paths in citation/chunk payloads.
+16. Optionally call `/rag/answer-lc` and verify fallback behavior when citations are invalid.
 
 ## Troubleshooting
 
