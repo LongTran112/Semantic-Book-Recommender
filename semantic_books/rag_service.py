@@ -282,11 +282,57 @@ class RagService:
         return any(marker in q for marker in definition_markers)
 
     @staticmethod
-    def _build_follow_ups() -> List[str]:
+    def _extract_query_topic(query: str) -> str:
+        text = re.sub(r"\s+", " ", str(query or "").strip())
+        if not text:
+            return ""
+        lowered = text.lower()
+        prefixes = [
+            "what is ",
+            "what are ",
+            "define ",
+            "definition of ",
+            "explain ",
+            "explain for me ",
+        ]
+        for prefix in prefixes:
+            if lowered.startswith(prefix):
+                text = text[len(prefix) :].strip()
+                break
+        text = text.strip(" ?!.:,;\"'")
+        return text
+
+    @staticmethod
+    def _build_follow_ups(
+        query: str = "",
+        chunks: Optional[List[Dict[str, Any]]] = None,
+    ) -> List[str]:
+        topic = RagService._extract_query_topic(query)
+        categories: List[str] = []
+        for item in chunks or []:
+            category = str(item.get("category", "") or "").strip()
+            if category and category not in categories:
+                categories.append(category)
+            if len(categories) >= 2:
+                break
+
+        category_hint = ", ".join(categories) if categories else "these cited sources"
+        if topic:
+            if RagService._is_definition_query(query):
+                return [
+                    f"Compare `{topic}` with a closely related concept using only citations.",
+                    f"Give one practical implementation workflow for `{topic}` with step-by-step references.",
+                    f"Create a 2-week study plan for `{topic}` from {category_hint}.",
+                ]
+            return [
+                f"Turn this into a concise checklist for `{topic}` with citation anchors.",
+                f"What are common pitfalls for `{topic}` based on {category_hint}?",
+                f"Suggest a project idea to practice `{topic}` and cite the most relevant chapters/snippets.",
+            ]
         return [
-            "Compare these sources by theoretical depth and practical exercises.",
-            "Ask for a 2-week learning path using only these cited books.",
-            "Narrow by category and ask for implementation-focused chapters.",
+            f"Compare these sources by depth and practical coverage in {category_hint}.",
+            "Create a 2-week learning path using only the cited books.",
+            "Narrow by one category and ask for implementation-focused chapters with citations.",
         ]
 
     def _build_citations(self, chunks: List[Dict[str, Any]], max_citations: int) -> List[Dict[str, Any]]:
@@ -408,8 +454,28 @@ class RagService:
         llm_config: Optional[LlamaCppConfig] = None,
         ollama_config: Optional[OllamaConfig] = None,
         on_token: Optional[Callable[[str], None]] = None,
+        should_cancel: Optional[Callable[[], bool]] = None,
     ) -> Dict[str, Any]:
         total_started = time.perf_counter()
+        if should_cancel is not None and should_cancel():
+            return {
+                "answer": "Request cancelled by client.",
+                "summary": "No response generated because the client disconnected.",
+                "follow_ups": [],
+                "citations": [],
+                "generation_mode": "deterministic",
+                "fallback_reason": "request_cancelled",
+                "metrics": {
+                    "total_ms": 0.0,
+                    "retrieval_ms": 0.0,
+                    "generation_ms": 0.0,
+                    "retrieved_chunks": 0,
+                    "used_citations": 0,
+                    "prompt_chars": 0,
+                    "answer_chars": 0,
+                    "peak_rss_mb": self._peak_rss_mb(),
+                },
+            }
         retrieval_started = time.perf_counter()
         cfg = retrieval_config or RetrievalConfig(final_top_k=max(1, int(top_k)))
         chunks = self.retrieve_chunks(query=query, filters=filters, top_k=top_k, retrieval_config=cfg)
@@ -446,7 +512,7 @@ class RagService:
             f"Grounded from {len(chunks)} retrieved chunks across {len(categories)} categories: "
             + ", ".join(categories[:4])
         )
-        follow_ups = self._build_follow_ups()
+        follow_ups = self._build_follow_ups(query=query, chunks=chunks)
 
         fallback_reason = ""
         generated_answer = ""
@@ -472,10 +538,17 @@ class RagService:
                 fallback_reason = "No generation backend enabled or available."
             else:
                 generation_started = time.perf_counter()
-                if on_token is None:
-                    result = generator.generate(prompt)
-                else:
-                    result = generator.generate(prompt, on_token=on_token)
+                try:
+                    if on_token is None:
+                        result = generator.generate(prompt, should_cancel=should_cancel)
+                    else:
+                        result = generator.generate(prompt, on_token=on_token, should_cancel=should_cancel)
+                except TypeError:
+                    # Backward compatibility for test doubles or older generator interfaces.
+                    if on_token is None:
+                        result = generator.generate(prompt)
+                    else:
+                        result = generator.generate(prompt, on_token=on_token)
                 generation_ms = round((time.perf_counter() - generation_started) * 1000.0, 2)
                 known_citations = {str(item["citation_id"]) for item in citations}
                 if result.error:

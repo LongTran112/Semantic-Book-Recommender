@@ -82,11 +82,26 @@ class RagServiceTests(unittest.TestCase):
             self.assertTrue(response["citations"])
             self.assertEqual(response["citations"][0]["book_id"], "b1")
             self.assertIn("citation_id", response["citations"][0])
-            self.assertEqual(response["follow_ups"], service._build_follow_ups())
+            self.assertTrue(response["follow_ups"])
+            self.assertEqual(len(response["follow_ups"]), 3)
+            self.assertTrue(any("deep learning" in item.lower() for item in response["follow_ups"]))
             citation_ids = [str(item.get("citation_id", "")) for item in response["citations"]]
             self.assertTrue(all(cid.startswith("C") for cid in citation_ids))
             self.assertIn("metrics", response)
             self.assertIn("total_ms", response["metrics"])
+
+    @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
+    def test_answer_question_returns_cancelled_response_when_requested(self, _mock_model) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            index_dir = _write_chunk_index(Path(tmp_dir))
+            service = RagService(index_dir)
+            response = service.answer_question(
+                query="Give me deep learning theory foundations",
+                should_cancel=lambda: True,
+            )
+            self.assertEqual(response["fallback_reason"], "request_cancelled")
+            self.assertEqual(response["citations"], [])
+            self.assertEqual(response["follow_ups"], [])
 
     @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
     def test_definition_query_prefers_grounded_definition_when_similarity_is_high(self, _mock_model) -> None:

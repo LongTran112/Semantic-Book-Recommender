@@ -7,11 +7,11 @@ import os
 import re
 from functools import lru_cache
 from pathlib import Path
-from queue import Queue
+from queue import Empty, Queue
 import threading
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -22,6 +22,10 @@ from semantic_books.langchain_adapter import (
 )
 from semantic_books.rag_config import LlamaCppConfig, OllamaConfig, RetrievalConfig
 from semantic_books.rag_service import RagFilters, RagService
+
+
+_RATE_LIMIT_STATE: Dict[str, Dict[str, float]] = {}
+_RATE_LIMIT_LOCK = threading.Lock()
 
 
 def _resolve_index_dir() -> Path:
@@ -102,6 +106,97 @@ class AnswerResponse(BaseModel):
     metrics: Optional[Dict[str, Any]] = None
 
 
+def _required_api_key() -> str:
+    value = str(os.getenv("RAG_API_KEY", "") or "").strip()
+    return value
+
+
+def _rate_limit_window_sec() -> int:
+    raw = str(os.getenv("RAG_RATE_LIMIT_WINDOW_SEC", "60") or "60").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 60
+
+
+def _rate_limit_max_requests() -> int:
+    raw = str(os.getenv("RAG_RATE_LIMIT_MAX_REQUESTS", "30") or "30").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 30
+
+
+def _redact_path_value(payload: Dict[str, Any]) -> Dict[str, Any]:
+    clean = dict(payload)
+    if "absolute_path" in clean:
+        clean["absolute_path"] = ""
+    return clean
+
+
+def _redact_chunks(chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [_redact_path_value(item) for item in chunks]
+
+
+def _redact_answer_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    clean = dict(payload)
+    citations = clean.get("citations", [])
+    if isinstance(citations, list):
+        clean["citations"] = [_redact_path_value(dict(item)) for item in citations if isinstance(item, dict)]
+    return clean
+
+
+def _identity_from_request(request: Request, api_key: str) -> str:
+    if api_key:
+        return f"key:{api_key}"
+    host = request.client.host if request.client else "unknown"
+    return f"ip:{host}"
+
+
+def require_guardrails(
+    request: Request,
+    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+) -> str:
+    configured_key = _required_api_key()
+    if not configured_key:
+        raise HTTPException(
+            status_code=503,
+            detail="RAG_API_KEY is not configured. Set it before calling protected endpoints.",
+        )
+    provided_key = str(x_api_key or "").strip()
+    if not provided_key or provided_key != configured_key:
+        raise HTTPException(status_code=401, detail="Unauthorized: invalid or missing X-API-Key.")
+    identity = _identity_from_request(request=request, api_key=provided_key)
+    _apply_rate_limit(identity)
+    return identity
+
+
+def _apply_rate_limit(identity: str) -> None:
+    import time
+
+    now = time.time()
+    window_sec = _rate_limit_window_sec()
+    max_requests = _rate_limit_max_requests()
+    with _RATE_LIMIT_LOCK:
+        state = _RATE_LIMIT_STATE.get(identity)
+        if state is None or (now - float(state.get("window_start", 0.0))) >= window_sec:
+            _RATE_LIMIT_STATE[identity] = {"window_start": now, "count": 1.0}
+            return
+        count = float(state.get("count", 0.0)) + 1.0
+        state["count"] = count
+        if count > float(max_requests):
+            retry_after = max(1, int(window_sec - (now - float(state.get("window_start", now)))))
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded. Retry in {retry_after}s.",
+            )
+
+
+def _reset_rate_limit_state() -> None:
+    with _RATE_LIMIT_LOCK:
+        _RATE_LIMIT_STATE.clear()
+
+
 def _compact_sentence(text: str, max_len: int = 320) -> str:
     compact = re.sub(r"\s+", " ", text).strip()
     if len(compact) <= max_len:
@@ -124,7 +219,7 @@ def _build_citations_from_docs(documents: List[Any], max_citations: int) -> List
                 "citation_id": f"C{idx}",
                 "title": str(meta.get("title", "Untitled")),
                 "book_id": str(meta.get("book_id", "")),
-                "absolute_path": str(meta.get("absolute_path", "")),
+                "absolute_path": "",
                 "category": str(meta.get("category", "Other")),
                 "learning_mode": str(meta.get("learning_mode", "unknown")),
                 "source_label": _source_label(meta),
@@ -138,16 +233,6 @@ def _build_citations_from_docs(documents: List[Any], max_citations: int) -> List
             }
         )
     return citations
-
-
-def _valid_generated_citations(text: str, citations: List[Dict[str, Any]]) -> bool:
-    if not text.strip():
-        return False
-    known = {str(item.get("citation_id", "")) for item in citations if item.get("citation_id")}
-    found = set(re.findall(r"\[(C\d+)\]", text))
-    if not found:
-        return False
-    return found.issubset(known)
 
 
 def _build_filters(payload: RagFiltersPayload) -> RagFilters:
@@ -214,7 +299,8 @@ def health() -> HealthResponse:
 
 
 @app.post("/rag/retrieve", response_model=RetrieveResponse)
-def rag_retrieve(request: RagRequest) -> RetrieveResponse:
+def rag_retrieve(request: RagRequest, _identity: str = Depends(require_guardrails)) -> RetrieveResponse:
+    _ = _identity
     try:
         rag_service = get_rag_service()
         filters = _build_filters(request.filters)
@@ -229,11 +315,12 @@ def rag_retrieve(request: RagRequest) -> RetrieveResponse:
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Retrieval failed: {exc}") from exc
-    return RetrieveResponse(chunks=chunks)
+    return RetrieveResponse(chunks=_redact_chunks(chunks))
 
 
 @app.post("/rag/answer", response_model=AnswerResponse)
-def rag_answer(request: RagRequest) -> AnswerResponse:
+def rag_answer(request: RagRequest, _identity: str = Depends(require_guardrails)) -> AnswerResponse:
+    _ = _identity
     try:
         rag_service = get_rag_service()
         filters = _build_filters(request.filters)
@@ -253,11 +340,12 @@ def rag_answer(request: RagRequest) -> AnswerResponse:
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Answer generation failed: {exc}") from exc
-    return AnswerResponse(**response)
+    return AnswerResponse(**_redact_answer_payload(response))
 
 
 @app.post("/rag/answer-lc", response_model=AnswerResponse)
-def rag_answer_langchain(request: RagRequest) -> AnswerResponse:
+def rag_answer_langchain(request: RagRequest, _identity: str = Depends(require_guardrails)) -> AnswerResponse:
+    _ = _identity
     try:
         rag_service = get_rag_service()
         filters = _build_filters(request.filters)
@@ -302,7 +390,8 @@ def rag_answer_langchain(request: RagRequest) -> AnswerResponse:
 
         context = build_context_from_documents(docs, max_docs=int(request.max_citations))
         generated = str(chain.invoke({"query": request.query.strip(), "context": context}) or "").strip()
-        if not _valid_generated_citations(generated, citations):
+        known = {str(item.get("citation_id", "")) for item in citations if item.get("citation_id")}
+        if not rag_service._validate_generated_answer(generated, known):
             fallback = rag_service.answer_question(
                 query=request.query.strip(),
                 filters=filters,
@@ -313,7 +402,7 @@ def rag_answer_langchain(request: RagRequest) -> AnswerResponse:
                 ollama_config=ollama,
             )
             fallback["fallback_reason"] = "LangChain output missing valid citation markers."
-            return AnswerResponse(**fallback)
+            return AnswerResponse(**_redact_answer_payload(fallback))
 
         categories = sorted({str(item.get("category", "Other")) for item in citations})
         summary = (
@@ -323,8 +412,8 @@ def rag_answer_langchain(request: RagRequest) -> AnswerResponse:
         return AnswerResponse(
             answer=generated,
             summary=summary,
-            follow_ups=rag_service._build_follow_ups(),
-            citations=citations,
+            follow_ups=rag_service._build_follow_ups(query=request.query.strip(), chunks=citations),
+            citations=[_redact_path_value(item) for item in citations],
             generation_mode="langchain",
             fallback_reason="",
         )
@@ -335,40 +424,57 @@ def rag_answer_langchain(request: RagRequest) -> AnswerResponse:
 
 
 @app.post("/rag/answer-stream")
-def rag_answer_stream(request: RagRequest) -> StreamingResponse:
+def rag_answer_stream(
+    request: Request,
+    payload: RagRequest,
+    _identity: str = Depends(require_guardrails),
+) -> StreamingResponse:
+    _ = _identity
     rag_service = get_rag_service()
-    filters = _build_filters(request.filters)
-    retrieval = _build_retrieval_config(request.retrieval, request.top_k)
-    llm = _build_llm_config(request.llm)
-    ollama = _build_ollama_config(request.ollama)
+    filters = _build_filters(payload.filters)
+    retrieval = _build_retrieval_config(payload.retrieval, payload.top_k)
+    llm = _build_llm_config(payload.llm)
+    ollama = _build_ollama_config(payload.ollama)
     events: "Queue[Optional[Dict[str, Any]]]" = Queue()
+    cancel_event = threading.Event()
 
     def _on_token(token: str) -> None:
+        if cancel_event.is_set():
+            return
         events.put({"type": "token", "token": token})
 
     def _worker() -> None:
         try:
             response = rag_service.answer_question(
-                query=request.query.strip(),
+                query=payload.query.strip(),
                 filters=filters,
-                top_k=int(request.top_k),
-                max_citations=int(request.max_citations),
+                top_k=int(payload.top_k),
+                max_citations=int(payload.max_citations),
                 retrieval_config=retrieval,
                 llm_config=llm,
                 ollama_config=ollama,
                 on_token=_on_token if bool(ollama.enabled or llm.enabled) else None,
+                should_cancel=cancel_event.is_set,
             )
-            events.put({"type": "final", "response": response})
+            if not cancel_event.is_set():
+                events.put({"type": "final", "response": _redact_answer_payload(response)})
         except Exception as exc:
-            events.put({"type": "error", "error": str(exc)})
+            if not cancel_event.is_set():
+                events.put({"type": "error", "error": str(exc)})
         finally:
             events.put(None)
 
     threading.Thread(target=_worker, daemon=True).start()
 
-    def _event_generator():
+    async def _event_generator():
         while True:
-            item = events.get()
+            if await request.is_disconnected():
+                cancel_event.set()
+                break
+            try:
+                item = events.get(timeout=0.25)
+            except Empty:
+                continue
             if item is None:
                 break
             yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"

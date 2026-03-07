@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import unittest
 from unittest.mock import patch
 
@@ -80,7 +81,13 @@ class _FakeRagService:
 
 class RagApiTests(unittest.TestCase):
     def setUp(self) -> None:
+        os.environ["RAG_API_KEY"] = "test-internal-key"
+        os.environ["RAG_RATE_LIMIT_WINDOW_SEC"] = "60"
+        os.environ["RAG_RATE_LIMIT_MAX_REQUESTS"] = "100"
+        api._reset_rate_limit_state()
+        api.get_rag_service.cache_clear()
         self.client = TestClient(api.app)
+        self.headers = {"X-API-Key": "test-internal-key"}
 
     @patch("api.get_rag_service")
     def test_health_ok(self, mock_get_service) -> None:
@@ -107,11 +114,13 @@ class RagApiTests(unittest.TestCase):
                 "top_k": 4,
                 "filters": {"categories": ["DeepLearning"], "learning_modes": ["theory"], "min_similarity": 0.0},
             },
+            headers=self.headers,
         )
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertTrue(payload["chunks"])
         self.assertEqual(payload["chunks"][0]["book_id"], "b1")
+        self.assertEqual(payload["chunks"][0]["absolute_path"], "")
 
     @patch("api.get_rag_service")
     def test_answer_endpoint_returns_contract(self, mock_get_service) -> None:
@@ -125,6 +134,7 @@ class RagApiTests(unittest.TestCase):
                 "max_citations": 3,
                 "llm": {"enabled": False},
             },
+            headers=self.headers,
         )
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -137,6 +147,7 @@ class RagApiTests(unittest.TestCase):
         self.assertIn("metrics", payload)
         self.assertFalse(fake.last_answer_kwargs["llm_config"].enabled)
         self.assertFalse(fake.last_answer_kwargs["ollama_config"].enabled)
+        self.assertEqual(payload["citations"][0]["absolute_path"], "")
 
     @patch("api.get_rag_service")
     def test_answer_endpoint_accepts_ollama_config(self, mock_get_service) -> None:
@@ -156,14 +167,39 @@ class RagApiTests(unittest.TestCase):
                     "timeout_sec": 30,
                 },
             },
+            headers=self.headers,
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(fake.last_answer_kwargs["ollama_config"].enabled)
         self.assertEqual(fake.last_answer_kwargs["ollama_config"].model, "deepseek-r1-local:latest")
 
     def test_invalid_payload_returns_422(self) -> None:
-        response = self.client.post("/rag/answer", json={"query": "", "top_k": 0})
+        response = self.client.post("/rag/answer", json={"query": "", "top_k": 0}, headers=self.headers)
         self.assertEqual(response.status_code, 422)
+
+    def test_protected_endpoint_rejects_missing_api_key(self) -> None:
+        response = self.client.post("/rag/answer", json={"query": "test question"})
+        self.assertEqual(response.status_code, 401)
+
+    def test_protected_endpoint_rejects_invalid_api_key(self) -> None:
+        response = self.client.post(
+            "/rag/answer",
+            json={"query": "test question"},
+            headers={"X-API-Key": "wrong-key"},
+        )
+        self.assertEqual(response.status_code, 401)
+
+    @patch("api.get_rag_service")
+    def test_rate_limit_returns_429(self, mock_get_service) -> None:
+        mock_get_service.return_value = _FakeRagService()
+        os.environ["RAG_RATE_LIMIT_MAX_REQUESTS"] = "2"
+        api._reset_rate_limit_state()
+        first = self.client.post("/rag/retrieve", json={"query": "a"}, headers=self.headers)
+        second = self.client.post("/rag/retrieve", json={"query": "b"}, headers=self.headers)
+        third = self.client.post("/rag/retrieve", json={"query": "c"}, headers=self.headers)
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(third.status_code, 429)
 
     @patch("api.get_rag_service")
     def test_answer_stream_endpoint_returns_events(self, mock_get_service) -> None:
@@ -172,10 +208,12 @@ class RagApiTests(unittest.TestCase):
             "POST",
             "/rag/answer-stream",
             json={"query": "deep learning foundations", "ollama": {"enabled": True}},
+            headers=self.headers,
         ) as response:
             self.assertEqual(response.status_code, 200)
             text = response.read().decode("utf-8")
         self.assertIn('"type": "final"', text)
+        self.assertNotIn("/tmp/a.pdf", text)
 
 
 if __name__ == "__main__":

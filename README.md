@@ -274,6 +274,10 @@ python3 -m pip install -r requirements.txt
 Start the API server:
 
 ```bash
+export RAG_API_KEY="change-this-internal-key"
+# Optional internal guardrail tuning
+export RAG_RATE_LIMIT_WINDOW_SEC=60
+export RAG_RATE_LIMIT_MAX_REQUESTS=30
 .venv/bin/uvicorn api:app --reload --port 8000
 ```
 
@@ -283,6 +287,13 @@ Core endpoints:
 - `POST /rag/retrieve` - returns retrieved chunks only (debug/explainability).
 - `POST /rag/answer` - canonical grounded answer contract (recommended default).
 - `POST /rag/answer-lc` - experimental LangChain route with citation-safe fallback.
+- `POST /rag/answer-stream` - SSE token stream with final response event.
+
+Internal guardrails enabled on RAG endpoints:
+
+- API key required via header: `X-API-Key: <RAG_API_KEY>`.
+- In-memory fixed-window rate limiting (`RAG_RATE_LIMIT_WINDOW_SEC`, `RAG_RATE_LIMIT_MAX_REQUESTS`).
+- API payloads redact local filesystem path values in citations/chunk payloads.
 
 When to use each answer endpoint:
 
@@ -294,6 +305,7 @@ Example request (`/rag/answer`):
 ```bash
 curl -X POST "http://127.0.0.1:8000/rag/answer" \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: ${RAG_API_KEY}" \
   -d '{
     "query": "Give me deep learning theory foundations",
     "top_k": 6,
@@ -347,8 +359,10 @@ For large libraries, keep the graph responsive with:
 9. In Ask Books, test `llama.cpp` mode and verify answers include citation markers (or fallback message appears).
 10. Open Relationship Graph and confirm node selection + actions work.
 11. Start FastAPI server and call `/health`.
-12. Call `/rag/answer` and verify citations + generation mode in JSON response.
-13. Optionally call `/rag/answer-lc` and verify fallback behavior when citations are invalid.
+12. Call `/rag/answer` with `X-API-Key` and verify citations + generation mode in JSON response.
+13. Send burst requests and verify rate-limit response (`429`) appears after threshold.
+14. Verify API responses do not expose local filesystem paths in citation/chunk payloads.
+15. Optionally call `/rag/answer-lc` and verify fallback behavior when citations are invalid.
 
 ## Troubleshooting
 
@@ -357,6 +371,8 @@ For large libraries, keep the graph responsive with:
 - **Ask Books (RAG) cannot load**: build chunk index and verify files in `output/semantic_index_chunks/`.
 - **llama.cpp mode falls back to deterministic**: verify `llama-cpp-python` is installed, model path exists, and answer includes citation markers like `[C1]`.
 - **ollama mode fails**: confirm `ollama run deepseek-r1-local:latest "hi"` works first, then verify base URL/model tag in the Ask Books page.
+- **RAG API returns 401**: ensure `RAG_API_KEY` is set on server and send `X-API-Key` header.
+- **RAG API returns 429**: reduce request burst, increase `RAG_RATE_LIMIT_MAX_REQUESTS`, or tune `RAG_RATE_LIMIT_WINDOW_SEC` for trusted internal load.
 - **Relationship graph is dense/slow**: reduce max nodes, increase min edge similarity, or lower neighbors per node.
 - **No relevant results**: lower the similarity threshold in the dashboard sidebar.
 - **Definition quality is weak**: rebuild with `--extraction-profile deep` and add category overrides for target domains (`Arduino`, `SQL`, `DeepLearning`), then rebuild `output/semantic_index_chunks/`.

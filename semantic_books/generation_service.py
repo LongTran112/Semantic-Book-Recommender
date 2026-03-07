@@ -22,6 +22,7 @@ class GeneratorBackend(Protocol):
         self,
         prompt: str,
         on_token: Optional[Callable[[str], None]] = None,
+        should_cancel: Optional[Callable[[], bool]] = None,
     ) -> "GenerationResult":
         """Generate plain text from prompt."""
 
@@ -70,7 +71,9 @@ class LlamaCppGenerator:
         self,
         prompt: str,
         on_token: Optional[Callable[[str], None]] = None,
+        should_cancel: Optional[Callable[[], bool]] = None,
     ) -> GenerationResult:
+        _ = should_cancel
         if not self._ensure_model():
             return GenerationResult(text="", backend="llama.cpp", error=self._last_error)
         if self._llm is None:
@@ -161,6 +164,7 @@ class OllamaGenerator:
         self,
         prompt: str,
         on_token: Optional[Callable[[str], None]] = None,
+        should_cancel: Optional[Callable[[], bool]] = None,
     ) -> GenerationResult:
         payload = {
             "model": str(self.cfg.model).strip(),
@@ -191,6 +195,8 @@ class OllamaGenerator:
                 else:
                     parts = []
                     for raw_line in response:
+                        if should_cancel is not None and should_cancel():
+                            break
                         line = raw_line.decode("utf-8", errors="replace").strip()
                         if not line:
                             continue
