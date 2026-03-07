@@ -31,6 +31,7 @@ python3 -m pip install -r requirements.txt
   --config "./categories.yaml" \
   --source "/Users/longtran/Documents/E-Books" \
   --output-dir "./output" \
+  --extraction-profile custom \
   --max-pages 8 \
   --extract-timeout 12
 ```
@@ -38,6 +39,56 @@ python3 -m pip install -r requirements.txt
 The run above now also writes `output/semantic_source.jsonl`, which is used for
 semantic search and recommendation.
 It also writes `output/semantic_chunks.jsonl`, which is used for local RAG Q&A.
+
+### Extraction Profiles (Grounding vs Speed)
+
+`index_books.py` now supports profile presets that tune extraction depth and chunking:
+
+- `custom`: legacy behavior (same defaults as before unless explicit flags are set)
+- `fast`: shallower extraction for quick rebuild cycles
+- `balanced`: deeper than legacy with moderate runtime cost
+- `deep`: highest extraction depth for better definition grounding
+
+Quick rebuild (fast):
+
+```bash
+.venv/bin/python index_books.py \
+  --config "./categories.yaml" \
+  --source "/Users/longtran/Documents/E-Books" \
+  --output-dir "./output" \
+  --extraction-profile fast
+```
+
+Quality-focused rebuild (deep):
+
+```bash
+.venv/bin/python index_books.py \
+  --config "./categories.yaml" \
+  --source "/Users/longtran/Documents/E-Books" \
+  --output-dir "./output" \
+  --extraction-profile deep
+```
+
+You can still override profile values explicitly with `--max-pages`, `--extract-timeout`,
+`--chunk-size`, and `--chunk-overlap`.
+
+Category-specific deeper extraction can be applied with:
+
+```bash
+.venv/bin/python index_books.py \
+  --config "./categories.yaml" \
+  --source "/Users/longtran/Documents/E-Books" \
+  --output-dir "./output" \
+  --extraction-profile balanced \
+  --category-depth-override "Arduino=24:30" \
+  --category-depth-override "SQL=20:26" \
+  --category-depth-override "DeepLearning=24:30"
+```
+
+Override format is `Category=max_pages[:timeout]`.
+
+After each run, the script prints extraction settings and a chunk coverage summary
+(average chunk length, source-type counts, and override usage stats).
 
 Generate a review file for uncertain classifications:
 
@@ -202,12 +253,12 @@ For local generator mode (`llama.cpp`):
 - Set model path in the Ask page and switch to `Answer mode = llama.cpp`.
 - If citations are invalid or runtime fails, dashboard falls back to deterministic grounded output.
 
-For local generator mode (`ollama` + `qwen3.5:9b`):
+For local generator mode (`ollama` + `deepseek-r1-local:latest`):
 
 - Install and start Ollama locally.
-- Pull a model once: `ollama pull qwen3.5:9b`.
-- Verify runtime: `ollama run qwen3.5:9b "hi there"`.
-- In Ask Books, set `Answer mode = ollama`, keep base URL `http://127.0.0.1:11434`, and set model tag `qwen3.5:9b`.
+- Pull a model once: `ollama pull deepseek-r1-local:latest`.
+- Verify runtime: `ollama run deepseek-r1-local:latest "hi there"`.
+- In Ask Books, set `Answer mode = ollama`, keep base URL `http://127.0.0.1:11434`, and set model tag `deepseek-r1-local:latest`.
 - If output quality is weak, reduce temperature and increase context window.
 
 ## Launch RAG API (FastAPI)
@@ -305,6 +356,8 @@ For large libraries, keep the graph responsive with:
 - **Dashboard cannot load index**: rerun indexing and semantic build commands, then verify files in `output/semantic_index/`.
 - **Ask Books (RAG) cannot load**: build chunk index and verify files in `output/semantic_index_chunks/`.
 - **llama.cpp mode falls back to deterministic**: verify `llama-cpp-python` is installed, model path exists, and answer includes citation markers like `[C1]`.
-- **ollama mode fails**: confirm `ollama run qwen3.5:9b "hi"` works first, then verify base URL/model tag in the Ask Books page.
+- **ollama mode fails**: confirm `ollama run deepseek-r1-local:latest "hi"` works first, then verify base URL/model tag in the Ask Books page.
 - **Relationship graph is dense/slow**: reduce max nodes, increase min edge similarity, or lower neighbors per node.
 - **No relevant results**: lower the similarity threshold in the dashboard sidebar.
+- **Definition quality is weak**: rebuild with `--extraction-profile deep` and add category overrides for target domains (`Arduino`, `SQL`, `DeepLearning`), then rebuild `output/semantic_index_chunks/`.
+- **Indexing is too slow**: switch to `--extraction-profile fast` for iteration, and use `deep` only for final quality rebuilds.

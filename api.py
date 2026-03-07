@@ -65,7 +65,7 @@ class LlamaCppConfigPayload(BaseModel):
 class OllamaConfigPayload(BaseModel):
     enabled: bool = False
     base_url: str = "http://127.0.0.1:11434"
-    model: str = "qwen3.5:9b"
+    model: str = "deepseek-r1-local:latest"
     temperature: float = 0.2
     top_p: float = 0.9
     num_ctx: int = 8192

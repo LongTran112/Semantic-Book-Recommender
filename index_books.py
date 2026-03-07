@@ -253,6 +253,11 @@ DEFAULT_CATEGORY_ORDER: List[str] = CATEGORY_ORDER.copy()
 DEFAULT_SOURCE_WEIGHTS: Dict[str, float] = dict(SOURCE_WEIGHTS)
 DEFAULT_KEYWORDS: Dict[str, List[str]] = {key: values[:] for key, values in KEYWORDS.items()}
 
+LEGACY_DEFAULT_MAX_PAGES = 8
+LEGACY_DEFAULT_EXTRACT_TIMEOUT = 12
+LEGACY_DEFAULT_CHUNK_SIZE = 1200
+LEGACY_DEFAULT_CHUNK_OVERLAP = 200
+
 
 def compile_keyword_patterns(
     keywords: Dict[str, List[str]],
@@ -379,6 +384,27 @@ class ChunkRecord:
     chunk_text: str
 
 
+@dataclass(frozen=True)
+class ExtractionProfile:
+    max_pages: int
+    extract_timeout: int
+    chunk_size: int
+    chunk_overlap: int
+
+
+@dataclass(frozen=True)
+class CategoryDepthOverride:
+    max_pages: Optional[int] = None
+    extract_timeout: Optional[int] = None
+
+
+EXTRACTION_PROFILES: Dict[str, ExtractionProfile] = {
+    "fast": ExtractionProfile(max_pages=6, extract_timeout=10, chunk_size=900, chunk_overlap=120),
+    "balanced": ExtractionProfile(max_pages=12, extract_timeout=16, chunk_size=1200, chunk_overlap=200),
+    "deep": ExtractionProfile(max_pages=22, extract_timeout=28, chunk_size=1500, chunk_overlap=260),
+}
+
+
 def normalize(text: str) -> str:
     text = text.lower()
     text = re.sub(r"[_\-]+", " ", text)
@@ -390,6 +416,95 @@ def normalize(text: str) -> str:
 def build_book_id(path: Path) -> str:
     digest = hashlib.sha1(str(path.resolve()).encode("utf-8")).hexdigest()
     return digest[:12]
+
+
+def _safe_positive_int(value: Optional[int], fallback: int, minimum: int) -> int:
+    if value is None:
+        return fallback
+    return max(minimum, int(value))
+
+
+def resolve_extraction_settings(
+    profile_name: str,
+    cli_max_pages: Optional[int],
+    cli_extract_timeout: Optional[int],
+    cli_chunk_size: Optional[int],
+    cli_chunk_overlap: Optional[int],
+) -> ExtractionProfile:
+    """Resolve effective extraction settings.
+
+    Resolution order:
+    1) explicit CLI flags
+    2) extraction profile values
+    3) legacy defaults (when profile is 'custom')
+    """
+    profile = EXTRACTION_PROFILES.get(profile_name)
+
+    base_max_pages = profile.max_pages if profile else LEGACY_DEFAULT_MAX_PAGES
+    base_extract_timeout = profile.extract_timeout if profile else LEGACY_DEFAULT_EXTRACT_TIMEOUT
+    base_chunk_size = profile.chunk_size if profile else LEGACY_DEFAULT_CHUNK_SIZE
+    base_chunk_overlap = profile.chunk_overlap if profile else LEGACY_DEFAULT_CHUNK_OVERLAP
+
+    max_pages = _safe_positive_int(cli_max_pages, base_max_pages, minimum=1)
+    extract_timeout = _safe_positive_int(cli_extract_timeout, base_extract_timeout, minimum=2)
+    chunk_size = _safe_positive_int(cli_chunk_size, base_chunk_size, minimum=300)
+    chunk_overlap = max(0, int(base_chunk_overlap if cli_chunk_overlap is None else cli_chunk_overlap))
+
+    return ExtractionProfile(
+        max_pages=max_pages,
+        extract_timeout=extract_timeout,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
+
+
+def parse_category_depth_overrides(
+    raw_values: Sequence[str],
+) -> Dict[str, CategoryDepthOverride]:
+    """Parse overrides in `Category=max_pages[:timeout]` format."""
+    overrides: Dict[str, CategoryDepthOverride] = {}
+    for raw_value in raw_values:
+        value = raw_value.strip()
+        if not value:
+            continue
+        if "=" not in value:
+            raise ValueError(
+                f"Invalid --category-depth-override '{raw_value}'. "
+                "Expected format: Category=max_pages[:timeout]"
+            )
+        category, numbers = value.split("=", 1)
+        category = category.strip()
+        numbers = numbers.strip()
+        if not category or not numbers:
+            raise ValueError(
+                f"Invalid --category-depth-override '{raw_value}'. "
+                "Expected format: Category=max_pages[:timeout]"
+            )
+        parts = [part.strip() for part in numbers.split(":")]
+        if len(parts) not in {1, 2}:
+            raise ValueError(
+                f"Invalid --category-depth-override '{raw_value}'. "
+                "Expected format: Category=max_pages[:timeout]"
+            )
+        try:
+            max_pages = max(1, int(parts[0]))
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid max_pages in --category-depth-override '{raw_value}'."
+            ) from exc
+        extract_timeout: Optional[int] = None
+        if len(parts) == 2 and parts[1]:
+            try:
+                extract_timeout = max(2, int(parts[1]))
+            except ValueError as exc:
+                raise ValueError(
+                    f"Invalid timeout in --category-depth-override '{raw_value}'."
+                ) from exc
+        overrides[category] = CategoryDepthOverride(
+            max_pages=max_pages,
+            extract_timeout=extract_timeout,
+        )
+    return overrides
 
 
 def sanitize_text(text: str) -> str:
@@ -590,20 +705,17 @@ def force_category_from_name(filename_text: str, title_text: str) -> Optional[Tu
     return None
 
 
-def categorize_book(book_path: Path, max_pages: int, extract_timeout: int) -> BookRecord:
-    filename = book_path.name
-    filename_text = normalize(book_path.stem)
-
-    raw_title, raw_metadata, raw_body, error_hint = extract_book_signals_with_timeout(
-        book_path=book_path,
-        max_pages=max_pages,
-        timeout_seconds=extract_timeout,
-    )
-
+def _score_record_from_extracted_text(
+    book_path: Path,
+    filename_text: str,
+    raw_title: str,
+    raw_metadata: str,
+    raw_body: str,
+    error_hint: str,
+) -> Tuple[str, float, List[str], str, str, str]:
     title_text = normalize(raw_title)
     metadata_text = normalize(raw_metadata)
     body_text = normalize(raw_body)
-
     forced = force_category_from_name(filename_text=filename_text, title_text=title_text)
     if forced is not None:
         forced_category, forced_phrase = forced
@@ -617,6 +729,63 @@ def categorize_book(book_path: Path, max_pages: int, extract_timeout: int) -> Bo
         )
     if error_hint:
         matched = matched + [error_hint]
+    return category, confidence, matched, title_text, metadata_text, body_text
+
+
+def categorize_book(
+    book_path: Path,
+    max_pages: int,
+    extract_timeout: int,
+    category_overrides: Optional[Dict[str, CategoryDepthOverride]] = None,
+) -> Tuple[BookRecord, Optional[str]]:
+    filename = book_path.name
+    filename_text = normalize(book_path.stem)
+
+    raw_title, raw_metadata, raw_body, error_hint = extract_book_signals_with_timeout(
+        book_path=book_path,
+        max_pages=max_pages,
+        timeout_seconds=extract_timeout,
+    )
+
+    category, confidence, matched, _title_text, _metadata_text, _body_text = _score_record_from_extracted_text(
+        book_path=book_path,
+        filename_text=filename_text,
+        raw_title=raw_title,
+        raw_metadata=raw_metadata,
+        raw_body=raw_body,
+        error_hint=error_hint,
+    )
+
+    override_category: Optional[str] = None
+    if category_overrides:
+        override = category_overrides.get(category)
+        if override is not None:
+            override_pages = override.max_pages if override.max_pages is not None else max_pages
+            override_timeout = (
+                override.extract_timeout if override.extract_timeout is not None else extract_timeout
+            )
+            if override_pages != max_pages or override_timeout != extract_timeout:
+                override_category = category
+                raw_title, raw_metadata, raw_body, error_hint = extract_book_signals_with_timeout(
+                    book_path=book_path,
+                    max_pages=override_pages,
+                    timeout_seconds=override_timeout,
+                )
+                (
+                    category,
+                    confidence,
+                    matched,
+                    _title_text,
+                    _metadata_text,
+                    _body_text,
+                ) = _score_record_from_extracted_text(
+                    book_path=book_path,
+                    filename_text=filename_text,
+                    raw_title=raw_title,
+                    raw_metadata=raw_metadata,
+                    raw_body=raw_body,
+                    error_hint=error_hint,
+                )
 
     title = raw_title.strip() or book_path.stem
     mode_source = " ".join([title, raw_metadata or "", raw_body[:6000] if raw_body else "", filename])
@@ -632,7 +801,7 @@ def categorize_book(book_path: Path, max_pages: int, extract_timeout: int) -> Bo
         metadata_text=raw_metadata.strip(),
         body_preview=(raw_body or "")[:12000],
         learning_mode=learning_mode,
-    )
+    ), override_category
 
 
 def gather_books(source_dir: Path) -> List[Path]:
@@ -642,13 +811,53 @@ def gather_books(source_dir: Path) -> List[Path]:
     return sorted(books)
 
 
-def build_records(book_files: Sequence[Path], max_pages: int, extract_timeout: int) -> List[BookRecord]:
+def build_records(
+    book_files: Sequence[Path],
+    max_pages: int,
+    extract_timeout: int,
+    category_overrides: Optional[Dict[str, CategoryDepthOverride]] = None,
+) -> Tuple[List[BookRecord], Dict[str, Any]]:
     records: List[BookRecord] = []
+    override_hits = 0
+    override_by_category: Dict[str, int] = defaultdict(int)
     for idx, path in enumerate(book_files, start=1):
-        records.append(categorize_book(path, max_pages=max_pages, extract_timeout=extract_timeout))
+        record, override_category = categorize_book(
+            path,
+            max_pages=max_pages,
+            extract_timeout=extract_timeout,
+            category_overrides=category_overrides,
+        )
+        records.append(record)
+        if override_category:
+            override_hits += 1
+            override_by_category[override_category] += 1
         if idx % 25 == 0 or idx == len(book_files):
             print(f"Processed {idx}/{len(book_files)} books...")
-    return sorted(records, key=lambda rec: (rec.category, -rec.confidence, rec.title.lower()))
+    sorted_records = sorted(records, key=lambda rec: (rec.category, -rec.confidence, rec.title.lower()))
+    stats: Dict[str, Any] = {
+        "override_hits": override_hits,
+        "override_by_category": dict(sorted(override_by_category.items())),
+    }
+    return sorted_records, stats
+
+
+def summarize_chunk_coverage(chunks: Sequence[ChunkRecord]) -> Dict[str, Any]:
+    if not chunks:
+        return {
+            "total_chunks": 0,
+            "avg_chunk_len": 0.0,
+            "source_type_counts": {},
+        }
+    total_len = sum(max(0, chunk.chunk_len) for chunk in chunks)
+    avg_len = round(total_len / max(len(chunks), 1), 1)
+    source_counts: Dict[str, int] = defaultdict(int)
+    for chunk in chunks:
+        source_counts[chunk.source_type] += 1
+    return {
+        "total_chunks": len(chunks),
+        "avg_chunk_len": avg_len,
+        "source_type_counts": dict(sorted(source_counts.items())),
+    }
 
 
 def write_csv(records: Sequence[BookRecord], csv_path: Path) -> None:
@@ -924,16 +1133,25 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         help="Directory where Markdown/CSV index files are written.",
     )
     parser.add_argument(
+        "--extraction-profile",
+        choices=["custom", "fast", "balanced", "deep"],
+        default="custom",
+        help=(
+            "Extraction profile. 'custom' preserves legacy defaults unless explicit "
+            "flags are set. Other profiles tune max-pages/timeout/chunk settings."
+        ),
+    )
+    parser.add_argument(
         "--max-pages",
         type=int,
-        default=8,
-        help="Max number of source pages/docs to extract text from (default: 8).",
+        default=None,
+        help="Max number of source pages/docs to extract text from (overrides profile).",
     )
     parser.add_argument(
         "--extract-timeout",
         type=int,
-        default=12,
-        help="Per-file extraction timeout in seconds (default: 12).",
+        default=None,
+        help="Per-file extraction timeout in seconds (overrides profile).",
     )
     parser.add_argument(
         "--min-confidence",
@@ -973,14 +1191,23 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--chunk-size",
         type=int,
-        default=1200,
-        help="Chunk size in characters for semantic chunk export.",
+        default=None,
+        help="Chunk size in characters for semantic chunk export (overrides profile).",
     )
     parser.add_argument(
         "--chunk-overlap",
         type=int,
-        default=200,
-        help="Chunk overlap in characters for semantic chunk export.",
+        default=None,
+        help="Chunk overlap in characters for semantic chunk export (overrides profile).",
+    )
+    parser.add_argument(
+        "--category-depth-override",
+        action="append",
+        default=[],
+        help=(
+            "Category-specific extraction override in format "
+            "Category=max_pages[:timeout]. Can be repeated."
+        ),
     )
     return parser.parse_args(argv)
 
@@ -992,16 +1219,29 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     config_path: Optional[Path] = args.config
     source_dir: Path = args.source
     output_dir: Path = args.output_dir
-    max_pages: int = max(1, args.max_pages)
-    extract_timeout: int = max(2, args.extract_timeout)
+    extraction_profile: str = args.extraction_profile
     min_confidence: Optional[float] = args.min_confidence
     low_confidence_report: Optional[Path] = args.low_confidence_report
     split_low_confidence_by_category: bool = args.split_low_confidence_by_category
     low_confidence_category_dir: Optional[Path] = args.low_confidence_category_dir
     semantic_source_jsonl: Optional[Path] = args.semantic_source_jsonl
     semantic_chunks_jsonl: Optional[Path] = args.semantic_chunks_jsonl
-    chunk_size: int = max(300, args.chunk_size)
-    chunk_overlap: int = max(0, args.chunk_overlap)
+    try:
+        resolved = resolve_extraction_settings(
+            profile_name=extraction_profile,
+            cli_max_pages=args.max_pages,
+            cli_extract_timeout=args.extract_timeout,
+            cli_chunk_size=args.chunk_size,
+            cli_chunk_overlap=args.chunk_overlap,
+        )
+        category_overrides = parse_category_depth_overrides(args.category_depth_override)
+    except ValueError as exc:
+        print(f"Invalid extraction configuration: {exc}", file=sys.stderr)
+        return 1
+    max_pages: int = resolved.max_pages
+    extract_timeout: int = resolved.extract_timeout
+    chunk_size: int = resolved.chunk_size
+    chunk_overlap: int = resolved.chunk_overlap
 
     try:
         CATEGORY_ORDER, SOURCE_WEIGHTS, KEYWORDS = load_runtime_config(config_path)
@@ -1019,7 +1259,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"No PDF/EPUB files found under: {source_dir}")
         return 0
 
-    records = build_records(book_files, max_pages=max_pages, extract_timeout=extract_timeout)
+    records, extraction_stats = build_records(
+        book_files,
+        max_pages=max_pages,
+        extract_timeout=extract_timeout,
+        category_overrides=category_overrides,
+    )
 
     csv_path = output_dir / "books_by_category.csv"
     md_path = output_dir / "books_by_category.md"
@@ -1031,6 +1276,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     write_semantic_source_jsonl(records, semantic_source_path)
     chunks = build_semantic_chunks(records, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     write_semantic_chunks_jsonl(chunks, semantic_chunks_path)
+    coverage = summarize_chunk_coverage(chunks)
 
     if min_confidence is not None:
         threshold = min(max(min_confidence, 0.0), 1.0)
@@ -1053,6 +1299,25 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f"Wrote MD : {md_path.resolve()}")
     print(f"Wrote semantic source JSONL: {semantic_source_path.resolve()}")
     print(f"Wrote semantic chunks JSONL: {semantic_chunks_path.resolve()} ({len(chunks)} chunks)")
+    print(
+        "Extraction settings: "
+        f"profile={extraction_profile}, max_pages={max_pages}, "
+        f"extract_timeout={extract_timeout}, chunk_size={chunk_size}, "
+        f"chunk_overlap={chunk_overlap}"
+    )
+    if category_overrides:
+        print(f"Category depth overrides: {len(category_overrides)} configured")
+    print(
+        "Coverage summary: "
+        f"avg_chunk_len={coverage['avg_chunk_len']}, "
+        f"source_types={coverage['source_type_counts']}"
+    )
+    if extraction_stats.get("override_hits", 0):
+        print(
+            "Override extraction usage: "
+            f"{extraction_stats['override_hits']} books, "
+            f"by_category={extraction_stats['override_by_category']}"
+        )
     return 0
 
 

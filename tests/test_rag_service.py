@@ -41,7 +41,7 @@ def _write_chunk_index(base_dir: Path) -> Path:
             "chunk_order": 0,
             "chunk_len": 120,
             "section_label": "body_preview",
-            "chunk_text": "Deep learning theory includes optimization and backpropagation foundations.",
+            "chunk_text": "Deep learning is a subset of machine learning using multilayer neural networks.",
         },
         {
             "chunk_id": "c2",
@@ -89,12 +89,26 @@ class RagServiceTests(unittest.TestCase):
             self.assertIn("total_ms", response["metrics"])
 
     @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
+    def test_definition_query_prefers_grounded_definition_when_similarity_is_high(self, _mock_model) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            index_dir = _write_chunk_index(Path(tmp_dir))
+            service = RagService(index_dir)
+            response = service.answer_question(
+                query="What is deep learning?",
+                filters=RagFilters(categories=["DeepLearning"]),
+                top_k=4,
+            )
+            answer = response["answer"]
+            self.assertNotIn("Insufficient grounded definition in provided sources", answer)
+            self.assertIn("[C1]", answer)
+
+    @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
     def test_hybrid_retrieval_includes_lexical_signals(self, _mock_model) -> None:
         with TemporaryDirectory() as tmp_dir:
             index_dir = _write_chunk_index(Path(tmp_dir))
             service = RagService(index_dir)
             chunks = service.retrieve_chunks(
-                query="backpropagation foundations",
+                query="multilayer neural networks",
                 filters=RagFilters(),
                 top_k=2,
                 retrieval_config=RetrievalConfig(
@@ -203,7 +217,7 @@ class RagServiceTests(unittest.TestCase):
                 filters=RagFilters(categories=["DeepLearning"]),
                 retrieval_config=RetrievalConfig(final_top_k=4),
                 llm_config=LlamaCppConfig(enabled=False),
-                ollama_config=OllamaConfig(enabled=True, model="qwen3.5:9b"),
+                ollama_config=OllamaConfig(enabled=True, model="deepseek-r1-local:latest"),
             )
             self.assertEqual(response["generation_mode"], "ollama")
             self.assertIn("[C1]", response["answer"])

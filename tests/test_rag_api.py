@@ -149,7 +149,7 @@ class RagApiTests(unittest.TestCase):
                 "ollama": {
                     "enabled": True,
                     "base_url": "http://127.0.0.1:11434",
-                    "model": "qwen3.5:9b",
+                    "model": "deepseek-r1-local:latest",
                     "temperature": 0.1,
                     "top_p": 0.8,
                     "num_ctx": 4096,
@@ -159,7 +159,7 @@ class RagApiTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(fake.last_answer_kwargs["ollama_config"].enabled)
-        self.assertEqual(fake.last_answer_kwargs["ollama_config"].model, "qwen3.5:9b")
+        self.assertEqual(fake.last_answer_kwargs["ollama_config"].model, "deepseek-r1-local:latest")
 
     def test_invalid_payload_returns_422(self) -> None:
         response = self.client.post("/rag/answer", json={"query": "", "top_k": 0})
