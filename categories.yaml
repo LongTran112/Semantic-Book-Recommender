@@ -35,6 +35,8 @@ category_order:
   - Semiconductor
   - STM32
   - Embedded-Systems
+  - FPGA
+  - KiCad
   - Linux-SystemProgramming
   - Build-C-CPP
   - System-Design
@@ -42,12 +44,16 @@ category_order:
   - OperatingSystems
   - DistributedSystems
   - Go
+  - Rust
   - Python
   - Java
   - Math-Algebra
   - Math-Calculus
   - Math-Statistics
   - Cloud-DevOps
+  - Docker
+  - Kubernetes
+  - Ansible
   - AWS
   - Databases
   - SQL
@@ -422,6 +428,27 @@ categories:
     - arduino
     - teensy
     - stm8
+  FPGA:
+    - fpga
+    - field programmable gate array
+    - xilinx
+    - altera
+    - intel fpga
+    - vivado
+    - quartus
+    - verilog
+    - vhdl
+    - hdl
+  KiCad:
+    - kicad
+    - pcb design
+    - pcb layout
+    - schematic capture
+    - eeschema
+    - pcbnew
+    - footprint
+    - gerber
+    - electronics cad
   Linux-SystemProgramming:
     - linux programming
     - system programming
@@ -500,6 +527,22 @@ categories:
     - build in go
     - in go
     - go mistakes
+  Rust:
+    - rust
+    - rustlang
+    - rust language
+    - rust programming
+    - cargo
+    - rustc
+    - crates.io
+    - ownership
+    - borrowing
+    - lifetimes
+    - trait
+    - tokio
+    - async rust
+    - actix
+    - axum
   Python:
     - python
     - python programming
@@ -543,15 +586,47 @@ categories:
     - hypothesis testing
     - regression
   Cloud-DevOps:
-    - docker
-    - kubernetes
     - devops
     - cloud computing
+    - cloud native
     - terraform
     - ci cd
+    - site reliability engineering
     - elk stack
     - elasticsearch
     - logstash
+  Docker:
+    - docker
+    - dockerfile
+    - docker compose
+    - docker-compose
+    - containerization
+    - container image
+    - container runtime
+    - buildkit
+    - docker swarm
+  Kubernetes:
+    - kubernetes
+    - kubenertes
+    - k8s
+    - kubelet
+    - kubectl
+    - helm
+    - container orchestration
+    - deployment
+    - statefulset
+    - ingress
+  Ansible:
+    - ansible
+    - ansible playbook
+    - ansible roles
+    - ansible inventory
+    - ansible galaxy
+    - ansible vault
+    - ansible collections
+    - ansible module
+    - ansible ad hoc
+    - ansible automation platform
   AWS:
     - aws
     - amazon web services
