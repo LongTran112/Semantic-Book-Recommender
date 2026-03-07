@@ -11,6 +11,7 @@ from io import BytesIO
 import json
 import math
 import platform
+import re
 import shutil
 import subprocess
 import urllib.error
@@ -84,7 +85,7 @@ RAG_RETRIEVAL_PRESETS: Dict[str, Dict[str, Any]] = {
 RAG_PERFORMANCE_PROFILES: Dict[str, Dict[str, Any]] = {
     "Fast": {
         "generation_mode": "ollama",
-        "ollama_model": "deepseek-r1-local:latest",
+        "ollama_model": "deepseek-r1:14b",
         "ollama_num_ctx": 4096,
         "ollama_temp": 0.15,
         "ollama_top_p": 0.85,
@@ -98,7 +99,7 @@ RAG_PERFORMANCE_PROFILES: Dict[str, Dict[str, Any]] = {
     },
     "Balanced": {
         "generation_mode": "ollama",
-        "ollama_model": "deepseek-r1-local:latest",
+        "ollama_model": "deepseek-r1:14b",
         "ollama_num_ctx": 6144,
         "ollama_temp": 0.2,
         "ollama_top_p": 0.9,
@@ -1428,6 +1429,46 @@ def _split_answer_display_sections(answer_text: str) -> Tuple[str, str]:
     return "\n".join(normal_lines).strip(), "\n".join(blur_lines).strip()
 
 
+def _normalize_answer_markdown(text: str) -> str:
+    clean = str(text or "").replace("\r\n", "\n").strip()
+    if not clean:
+        return ""
+
+    # Normalize malformed bold wrappers, e.g. "** Formal Definition: **" -> "Formal Definition:".
+    clean = re.sub(r"\*\*\s*([^*]+?)\s*\*\*", r"\1", clean)
+
+    # Canonicalize frequent metadata labels.
+    clean = re.sub(r"\bSources\s*Used\s*:", "SourcesUsed:", clean, flags=re.IGNORECASE)
+
+    # Insert section breaks before common labels wherever they appear inline.
+    section_labels = [
+        (r"answer\s*:", "Answer"),
+        (r"formal\s*definition\s*:", "Formal Definition"),
+        (r"plain\s*[-\s]?language\s*intuition\s*:", "Plain-language Intuition"),
+        (r"practical\s*use\s*[-\s]?case\s*:", "Practical Use-Case"),
+        (r"sourcesused\s*:", "SourcesUsed"),
+        (r"summary\s*:", "Summary"),
+    ]
+    for raw_pattern, label in section_labels:
+        clean = re.sub(
+            rf"(?is)\s*{raw_pattern}\s*",
+            f"\n\n### {label}\n\n",
+            clean,
+        )
+
+    # Ensure numbered steps become block-separated list items.
+    clean = re.sub(r"(?<!\n)(\d+\.)\s+", r"\n\n\1 ", clean)
+
+    # If model returned a single huge paragraph, split by sentence boundaries.
+    if "\n" not in clean and len(clean) > 280:
+        clean = re.sub(r"(?<=[.!?])\s+(?=[A-Z0-9*])", "\n\n", clean)
+
+    # Normalize spacing around headings and trim heading-only noise.
+    clean = re.sub(r"[ \t]+\n", "\n", clean)
+    clean = re.sub(r"\n{3,}", "\n\n", clean).strip()
+    return clean
+
+
 def _render_answer_with_blur(
     answer_text: str,
     *,
@@ -1435,7 +1476,7 @@ def _render_answer_with_blur(
     show_cursor: bool = False,
     hide_meta_text: bool = True,
 ) -> None:
-    render_text = str(answer_text or "")
+    render_text = _normalize_answer_markdown(str(answer_text or ""))
     if hide_meta_text:
         normal_text, _blurred_text = _split_answer_display_sections(render_text)
         render_text = normal_text
@@ -1459,24 +1500,74 @@ def _render_answer_with_blur(
         placeholder.markdown(render_text)
 
 
-def _render_rag_perf_rollup(chat_history: List[Dict[str, Any]], window: int = 10) -> None:
+def _metrics_row_from_response(
+    response: Dict[str, Any],
+    *,
+    answer_idx: int,
+    query: str = "",
+) -> Optional[Dict[str, Any]]:
+    metrics = response.get("metrics", {}) if isinstance(response, dict) else {}
+    if not isinstance(metrics, dict) or not metrics:
+        return None
+    return {
+        "answer_idx": int(answer_idx),
+        "query": query[:120] + ("..." if len(query) > 120 else ""),
+        "total_ms": float(metrics.get("total_ms", 0.0) or 0.0),
+        "retrieval_ms": float(metrics.get("retrieval_ms", 0.0) or 0.0),
+        "generation_ms": float(metrics.get("generation_ms", 0.0) or 0.0),
+        "peak_rss_mb": float(metrics.get("peak_rss_mb", 0.0) or 0.0),
+        "retrieved_chunks": int(metrics.get("retrieved_chunks", 0) or 0),
+        "used_citations": int(metrics.get("used_citations", 0) or 0),
+        "citation_coverage_ratio": float(metrics.get("citation_coverage_ratio", 0.0) or 0.0),
+        "top_similarity": float(metrics.get("top_similarity", 0.0) or 0.0),
+        "top_relevance_score": float(metrics.get("top_relevance_score", 0.0) or 0.0),
+        "prompt_chars": int(metrics.get("prompt_chars", 0) or 0),
+        "answer_chars": int(metrics.get("answer_chars", 0) or 0),
+    }
+
+
+def _append_rag_metrics(question: str, response: Dict[str, Any]) -> None:
+    history = st.session_state.get("rag-metrics-history", [])
+    if not isinstance(history, list):
+        history = []
+    next_idx = len(history) + 1
+    row = _metrics_row_from_response(response, answer_idx=next_idx, query=str(question or ""))
+    if row is None:
+        return
+    history.append(row)
+    st.session_state["rag-metrics-history"] = history[-200:]
+
+
+def _collect_recent_rag_metrics(chat_history: List[Dict[str, Any]], window: int = 10) -> List[Dict[str, Any]]:
+    # Preferred source: dedicated in-memory metrics history.
+    metrics_history = st.session_state.get("rag-metrics-history", [])
+    if isinstance(metrics_history, list) and metrics_history:
+        recent_metrics = metrics_history[-max(1, int(window)) :]
+        rows: List[Dict[str, Any]] = []
+        for idx, row in enumerate(recent_metrics, start=1):
+            if not isinstance(row, dict):
+                continue
+            clean = dict(row)
+            clean["answer_idx"] = idx
+            rows.append(clean)
+        if rows:
+            return rows
+
+    # Backward compatibility: derive rows from chat history when metrics history is missing.
     recent = chat_history[-max(1, int(window)) :]
-    metrics_rows: List[Dict[str, float]] = []
-    for item in recent:
+    rows = []
+    for idx, item in enumerate(recent, start=1):
         response = item.get("response", {})
-        metrics = response.get("metrics", {}) if isinstance(response, dict) else {}
-        if not isinstance(metrics, dict) or not metrics:
+        query = str(item.get("question", "") or "").strip()
+        row = _metrics_row_from_response(response, answer_idx=idx, query=query)
+        if row is None:
             continue
-        metrics_rows.append(
-            {
-                "total_ms": float(metrics.get("total_ms", 0.0) or 0.0),
-                "retrieval_ms": float(metrics.get("retrieval_ms", 0.0) or 0.0),
-                "generation_ms": float(metrics.get("generation_ms", 0.0) or 0.0),
-                "peak_rss_mb": float(metrics.get("peak_rss_mb", 0.0) or 0.0),
-                "top_relevance_score": float(metrics.get("top_relevance_score", 0.0) or 0.0),
-                "citation_coverage_ratio": float(metrics.get("citation_coverage_ratio", 0.0) or 0.0),
-            }
-        )
+        rows.append(row)
+    return rows
+
+
+def _render_rag_perf_rollup(chat_history: List[Dict[str, Any]], window: int = 10) -> None:
+    metrics_rows = _collect_recent_rag_metrics(chat_history=chat_history, window=window)
     if not metrics_rows:
         return
 
@@ -1493,35 +1584,6 @@ def _render_rag_perf_rollup(chat_history: List[Dict[str, Any]], window: int = 10
         f"max peak RSS {max_rss:.1f} MB | avg relevance {avg_relevance:.3f} | "
         f"avg citation coverage {avg_coverage:.2f}"
     )
-
-
-def _collect_recent_rag_metrics(chat_history: List[Dict[str, Any]], window: int = 10) -> List[Dict[str, Any]]:
-    recent = chat_history[-max(1, int(window)) :]
-    rows: List[Dict[str, Any]] = []
-    for idx, item in enumerate(recent, start=1):
-        response = item.get("response", {})
-        metrics = response.get("metrics", {}) if isinstance(response, dict) else {}
-        if not isinstance(metrics, dict) or not metrics:
-            continue
-        query = str(item.get("question", "") or "").strip()
-        rows.append(
-            {
-                "answer_idx": idx,
-                "query": query[:120] + ("..." if len(query) > 120 else ""),
-                "total_ms": float(metrics.get("total_ms", 0.0) or 0.0),
-                "retrieval_ms": float(metrics.get("retrieval_ms", 0.0) or 0.0),
-                "generation_ms": float(metrics.get("generation_ms", 0.0) or 0.0),
-                "peak_rss_mb": float(metrics.get("peak_rss_mb", 0.0) or 0.0),
-                "retrieved_chunks": int(metrics.get("retrieved_chunks", 0) or 0),
-                "used_citations": int(metrics.get("used_citations", 0) or 0),
-                "citation_coverage_ratio": float(metrics.get("citation_coverage_ratio", 0.0) or 0.0),
-                "top_similarity": float(metrics.get("top_similarity", 0.0) or 0.0),
-                "top_relevance_score": float(metrics.get("top_relevance_score", 0.0) or 0.0),
-                "prompt_chars": int(metrics.get("prompt_chars", 0) or 0),
-                "answer_chars": int(metrics.get("answer_chars", 0) or 0),
-            }
-        )
-    return rows
 
 
 def render_rag_metrics_page() -> None:
@@ -1706,6 +1768,8 @@ def render_ask_books_rag_page(
 
     if "rag-chat-history" not in st.session_state:
         st.session_state["rag-chat-history"] = []
+    if "rag-metrics-history" not in st.session_state:
+        st.session_state["rag-metrics-history"] = []
     if "rag-pending-question" not in st.session_state:
         st.session_state["rag-pending-question"] = ""
     if "rag-pinned-preset" not in st.session_state:
@@ -1944,7 +2008,7 @@ def render_ask_books_rag_page(
         )
         ollama_model = st.text_input(
             "Ollama model tag",
-            value="deepseek-r1-local:latest",
+        value="deepseek-r1:14b",
             key="rag-ollama-model",
             disabled=generation_mode != "ollama",
         )
@@ -2016,6 +2080,17 @@ def render_ask_books_rag_page(
 
     if not query:
         return
+
+    # Show the just-submitted prompt immediately while generation runs.
+    with st.chat_message("user"):
+        st.write(query)
+
+    with st.chat_message("assistant"):
+        assistant_block = st.container()
+        with assistant_block:
+            stream_placeholder = st.empty()
+            stream_status_placeholder = st.empty()
+            stream_status_placeholder.caption("Generating answer...")
 
     effective_top_k_chunks = int(top_k_chunks)
     effective_max_citations = int(max_citations)
@@ -2122,20 +2197,19 @@ def render_ask_books_rag_page(
                     num_ctx=effective_ollama_num_ctx,
                     timeout_sec=effective_ollama_timeout_sec,
                 )
-                stream_placeholder = st.empty() if effective_generation_mode == "ollama" else None
-                stream_status_placeholder = st.empty() if effective_generation_mode == "ollama" else None
+                if effective_generation_mode != "ollama":
+                    stream_status_placeholder.caption("Generating grounded answer...")
 
                 def _on_token(token: str) -> None:
                     nonlocal streamed_text
                     streamed_text += str(token)
-                    if stream_placeholder is not None:
+                    if effective_generation_mode == "ollama":
                         _render_answer_with_blur(
                             streamed_text,
                             placeholder=stream_placeholder,
                             show_cursor=True,
                             hide_meta_text=blur_meta_text,
                         )
-                    if stream_status_placeholder is not None:
                         stream_status_placeholder.caption("Generating answer...")
 
                 response = rag_service.answer_question(
@@ -2149,17 +2223,25 @@ def render_ask_books_rag_page(
                     on_token=_on_token if effective_generation_mode == "ollama" else None,
                     allow_fallback=not disable_fallback,
                 )
-                if stream_placeholder is not None:
-                    stream_placeholder.empty()
-                if stream_status_placeholder is not None:
-                    stream_status_placeholder.empty()
         except Exception as exc:
             st.error(f"Could not generate answer: {exc}")
             return
 
+    with assistant_block:
+        stream_placeholder.empty()
+        stream_status_placeholder.empty()
+        _render_rag_chat_response(
+            turn_idx=len(st.session_state.get("rag-chat-history", [])),
+            response=response,
+            show_debug=show_debug,
+            blur_meta_text=blur_meta_text,
+            show_fallback_notice=show_fallback_notice,
+        )
+
     history = st.session_state.get("rag-chat-history", [])
     history.append({"question": query, "response": response})
     st.session_state["rag-chat-history"] = history[-30:]
+    _append_rag_metrics(question=query, response=response)
     st.rerun()
 
 
@@ -2418,7 +2500,7 @@ def render_relationship_graph_page(
 
 
 def main() -> None:
-    st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
+    st.set_page_config(page_title="Technical RAG Developer Dashboard", layout="wide")
     st.markdown(
         """
 <style>
@@ -2456,7 +2538,7 @@ def main() -> None:
         """,
         unsafe_allow_html=True,
     )
-    st.title("Semantic Book Recommender Dashboard")
+    st.title("Technical RAG Developer Dashboard")
 
     index_dir = str(DEFAULT_INDEX_DIR)
     cover_cache_dir = str(DEFAULT_COVER_CACHE_DIR)
