@@ -1375,6 +1375,169 @@ def _render_rag_perf_rollup(chat_history: List[Dict[str, Any]], window: int = 10
     )
 
 
+def _collect_recent_rag_metrics(chat_history: List[Dict[str, Any]], window: int = 10) -> List[Dict[str, Any]]:
+    recent = chat_history[-max(1, int(window)) :]
+    rows: List[Dict[str, Any]] = []
+    for idx, item in enumerate(recent, start=1):
+        response = item.get("response", {})
+        metrics = response.get("metrics", {}) if isinstance(response, dict) else {}
+        if not isinstance(metrics, dict) or not metrics:
+            continue
+        query = str(item.get("question", "") or "").strip()
+        rows.append(
+            {
+                "answer_idx": idx,
+                "query": query[:120] + ("..." if len(query) > 120 else ""),
+                "total_ms": float(metrics.get("total_ms", 0.0) or 0.0),
+                "retrieval_ms": float(metrics.get("retrieval_ms", 0.0) or 0.0),
+                "generation_ms": float(metrics.get("generation_ms", 0.0) or 0.0),
+                "peak_rss_mb": float(metrics.get("peak_rss_mb", 0.0) or 0.0),
+                "retrieved_chunks": int(metrics.get("retrieved_chunks", 0) or 0),
+                "used_citations": int(metrics.get("used_citations", 0) or 0),
+                "prompt_chars": int(metrics.get("prompt_chars", 0) or 0),
+                "answer_chars": int(metrics.get("answer_chars", 0) or 0),
+            }
+        )
+    return rows
+
+
+def render_rag_metrics_page() -> None:
+    st.header("RAG Metrics")
+    st.caption("In-memory performance charts for the last 10 answers. Metrics reset when the app restarts.")
+
+    chat_history = st.session_state.get("rag-chat-history", [])
+    if not isinstance(chat_history, list):
+        chat_history = []
+    rows = _collect_recent_rag_metrics(chat_history=chat_history, window=10)
+    if not rows:
+        st.info(
+            "No recent answer metrics yet. Go to Ask Books (RAG), submit questions, then return to this page."
+        )
+        return
+
+    frame = pd.DataFrame(rows)
+    avg_total = float(frame["total_ms"].mean())
+    avg_retrieval = float(frame["retrieval_ms"].mean())
+    avg_generation = float(frame["generation_ms"].mean())
+    max_rss = float(frame["peak_rss_mb"].max())
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Avg total (ms)", f"{avg_total:.1f}")
+    c2.metric("Avg retrieval (ms)", f"{avg_retrieval:.1f}")
+    c3.metric("Avg generation (ms)", f"{avg_generation:.1f}")
+    c4.metric("Max peak RSS (MB)", f"{max_rss:.1f}")
+
+    export_cols = [
+        "answer_idx",
+        "query",
+        "total_ms",
+        "retrieval_ms",
+        "generation_ms",
+        "peak_rss_mb",
+        "retrieved_chunks",
+        "used_citations",
+        "prompt_chars",
+        "answer_chars",
+    ]
+    export_df = frame[export_cols].copy()
+    csv_bytes = export_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Download last 10 metrics (CSV)",
+        data=csv_bytes,
+        file_name="rag_last10_metrics.csv",
+        mime="text/csv",
+        key="rag-metrics-download-csv",
+        help="Exports only in-memory metrics from the current app session.",
+    )
+
+    st.subheader("Latency Trend (Last 10 Answers)")
+    if go is not None:
+        fig_latency = go.Figure()
+        fig_latency.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["total_ms"],
+                mode="lines+markers",
+                name="total_ms",
+            )
+        )
+        fig_latency.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["retrieval_ms"],
+                mode="lines+markers",
+                name="retrieval_ms",
+            )
+        )
+        fig_latency.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["generation_ms"],
+                mode="lines+markers",
+                name="generation_ms",
+            )
+        )
+        fig_latency.update_layout(
+            xaxis_title="Answer # (recent)",
+            yaxis_title="Milliseconds",
+            margin=dict(l=20, r=20, t=30, b=20),
+            legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig_latency, use_container_width=True)
+    else:
+        st.line_chart(
+            frame.set_index("answer_idx")[["total_ms", "retrieval_ms", "generation_ms"]],
+            use_container_width=True,
+        )
+
+    st.subheader("Resource and Payload Signals")
+    if go is not None:
+        fig_resource = go.Figure()
+        fig_resource.add_trace(
+            go.Bar(
+                x=frame["answer_idx"],
+                y=frame["peak_rss_mb"],
+                name="peak_rss_mb",
+            )
+        )
+        fig_resource.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["retrieved_chunks"],
+                mode="lines+markers",
+                name="retrieved_chunks",
+                yaxis="y2",
+            )
+        )
+        fig_resource.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["used_citations"],
+                mode="lines+markers",
+                name="used_citations",
+                yaxis="y2",
+            )
+        )
+        fig_resource.update_layout(
+            xaxis_title="Answer # (recent)",
+            yaxis=dict(title="Peak RSS (MB)"),
+            yaxis2=dict(title="Counts", overlaying="y", side="right"),
+            margin=dict(l=20, r=20, t=30, b=20),
+            legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig_resource, use_container_width=True)
+    else:
+        st.bar_chart(frame.set_index("answer_idx")[["peak_rss_mb"]], use_container_width=True)
+        st.line_chart(frame.set_index("answer_idx")[["retrieved_chunks", "used_citations"]], use_container_width=True)
+
+    with st.expander("Last 10 metrics table", expanded=False):
+        st.dataframe(
+            export_df,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
 def render_ask_books_rag_page(
     rag_service: RagService,
     all_categories: List[str],
@@ -2095,7 +2258,15 @@ def main() -> None:
     )
     view_page = st.sidebar.radio(
         "Page",
-        ["Currently Reading", "Search", "Relationship Graph", "Ask Books (RAG)", "Daily Recommendations", "Library"],
+        [
+            "Currently Reading",
+            "Search",
+            "Relationship Graph",
+            "Ask Books (RAG)",
+            "RAG Metrics",
+            "Daily Recommendations",
+            "Library",
+        ],
         index=1,
     )
     cards_per_row = st.sidebar.slider("Cards per row", min_value=1, max_value=6, value=4, step=1)
@@ -2161,6 +2332,11 @@ def main() -> None:
             all_categories=all_categories,
             all_modes=all_modes,
         )
+        index_dir, cover_cache_dir, reading_list_path = render_locked_paths_sidebar()
+        return
+
+    if view_page == "RAG Metrics":
+        render_rag_metrics_page()
         index_dir, cover_cache_dir, reading_list_path = render_locked_paths_sidebar()
         return
 
