@@ -134,6 +134,19 @@ class RagService:
             out[int(filtered_idxs[local_idx])] = float(score)
         return out
 
+    @staticmethod
+    def _normalize_dense_scores(dense_scores: Dict[int, float]) -> Dict[int, float]:
+        if not dense_scores:
+            return {}
+        values = list(dense_scores.values())
+        min_v = min(values)
+        max_v = max(values)
+        if max_v - min_v < 1e-8:
+            # Dense cosine can be negative; map to [0, 1] even when flat.
+            flat = max(0.0, min(1.0, (values[0] + 1.0) / 2.0))
+            return {idx: flat for idx in dense_scores}
+        return {idx: (float(score) - min_v) / (max_v - min_v) for idx, score in dense_scores.items()}
+
     def _lexical_scores(self, query: str, filtered_idxs: np.ndarray) -> Dict[int, float]:
         q_tokens = self._tokenize(query)
         if not q_tokens:
@@ -171,7 +184,7 @@ class RagService:
             candidates |= set(lexical_scores.keys())
         out: Dict[int, float] = {}
         for idx in candidates:
-            dense = float(dense_scores.get(idx, -1.0))
+            dense = float(dense_scores.get(idx, 0.0))
             lexical = float(lexical_scores.get(idx, 0.0))
             if hybrid_enabled:
                 score = (dense_weight * dense) + (lexical_weight * lexical)
@@ -237,7 +250,8 @@ class RagService:
         if filtered_idxs.size == 0:
             return []
 
-        dense_scores = self._dense_scores(clean_query, filtered_idxs)
+        dense_scores_raw = self._dense_scores(clean_query, filtered_idxs)
+        dense_scores = self._normalize_dense_scores(dense_scores_raw)
         lexical_scores = self._lexical_scores(clean_query, filtered_idxs)
         fused = self._fuse_scores(
             dense_scores=dense_scores,
@@ -255,14 +269,18 @@ class RagService:
         final_top_k = max(1, int(cfg.final_top_k if cfg.final_top_k else top_k))
         scored: List[Dict[str, Any]] = []
         for row_idx, final_score, fused_score in reranked_rows:
-            similarity = float(dense_scores.get(row_idx, -1.0))
-            if similarity < float(filters.min_similarity):
+            similarity = float(dense_scores_raw.get(row_idx, -1.0))
+            dense_norm = float(dense_scores.get(row_idx, 0.0))
+            relevance_for_filter = float(fused_score) if bool(cfg.hybrid_enabled) else dense_norm
+            if relevance_for_filter < float(filters.min_similarity):
                 continue
             item = dict(self.metadata[int(row_idx)])
             item["similarity"] = round(similarity, 4)
+            item["dense_score_norm"] = round(dense_norm, 4)
             item["lexical_score"] = round(float(lexical_scores.get(row_idx, 0.0)), 4)
             item["fused_score"] = round(float(fused_score), 4)
             item["score"] = round(float(final_score), 4)
+            item["relevance_score"] = round(relevance_for_filter, 4)
             scored.append(item)
             if len(scored) >= final_top_k:
                 break
@@ -407,6 +425,8 @@ class RagService:
     def _validate_generated_answer(text: str, known_citations: Set[str]) -> bool:
         if not text.strip():
             return False
+        if RagService._looks_like_reasoning_leak(text):
+            return False
         inline_found = set(re.findall(r"\[(C\d+)\]", text))
         if inline_found:
             return inline_found.issubset(known_citations)
@@ -419,7 +439,31 @@ class RagService:
 
         if not sources_used_found:
             return False
+        # Keep tolerance for terse outputs, but avoid accepting long unsupported answers.
+        if RagService._is_nontrivial_answer_without_inline_citations(text):
+            return False
         return sources_used_found.issubset(known_citations)
+
+    @staticmethod
+    def _looks_like_reasoning_leak(text: str) -> bool:
+        markers = [
+            r"\bso,\s*i need to\b",
+            r"\blet me\b",
+            r"\bthinking process\b",
+            r"\bthe user wants\b",
+            r"<think>",
+            r"generating grounded answer",
+        ]
+        return any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in markers)
+
+    @staticmethod
+    def _is_nontrivial_answer_without_inline_citations(text: str) -> bool:
+        stripped = text.strip()
+        stripped = re.sub(r"(?im)^\s*sourcesused\s*:\s*.+$", "", stripped).strip()
+        words = re.findall(r"\b\w+\b", stripped)
+        sentence_count = len(re.findall(r"[.!?](?:\s|$)", stripped))
+        line_count = len([line for line in stripped.splitlines() if line.strip()])
+        return len(words) > 36 or sentence_count > 2 or line_count > 3
 
     @staticmethod
     def _deterministic_answer(chunks: List[Dict[str, Any]], citations: List[Dict[str, Any]]) -> str:
@@ -455,6 +499,7 @@ class RagService:
         ollama_config: Optional[OllamaConfig] = None,
         on_token: Optional[Callable[[str], None]] = None,
         should_cancel: Optional[Callable[[], bool]] = None,
+        allow_fallback: bool = True,
     ) -> Dict[str, Any]:
         total_started = time.perf_counter()
         if should_cancel is not None and should_cancel():
@@ -507,6 +552,7 @@ class RagService:
         citations = self._build_citations(chunks, max_citations=max_citations)
         definition_query = self._is_definition_query(query)
         top_similarity = max(float(item.get("similarity", 0.0) or 0.0) for item in chunks) if chunks else 0.0
+        top_relevance = max(float(item.get("relevance_score", item.get("fused_score", 0.0)) or 0.0) for item in chunks)
         categories = sorted({str(item.get("category", "Other")) for item in chunks[: max(1, min(6, len(chunks)))]})
         summary = (
             f"Grounded from {len(chunks)} retrieved chunks across {len(categories)} categories: "
@@ -521,7 +567,18 @@ class RagService:
         ollama_cfg = ollama_config or OllamaConfig()
         generation_ms = 0.0
         prompt_chars = 0
-        if definition_query and top_similarity < 0.55:
+        raw_generated_attempt = ""
+        low_grounding_threshold = 0.28
+        if allow_fallback and top_relevance < low_grounding_threshold:
+            snippet_lines = []
+            for idx, item in enumerate(citations[:2], start=1):
+                snippet_lines.append(f"- {item.get('snippet', '')} [{item.get('citation_id', f'C{idx}')}]")
+            generated_answer = (
+                "Answer: Insufficient grounded evidence in provided sources for this query.\n"
+                + "\n".join(snippet_lines)
+            )
+            fallback_reason = "Low retrieval grounding score; returned grounded snippets."
+        elif allow_fallback and definition_query and top_similarity < 0.55:
             snippet_lines = []
             for idx, item in enumerate(citations[:2], start=1):
                 snippet_lines.append(f"- {item.get('snippet', '')} [{item.get('citation_id', f'C{idx}')}]")
@@ -551,6 +608,7 @@ class RagService:
                         result = generator.generate(prompt, on_token=on_token)
                 generation_ms = round((time.perf_counter() - generation_started) * 1000.0, 2)
                 known_citations = {str(item["citation_id"]) for item in citations}
+                raw_generated_attempt = str(result.text or "").strip()
                 if result.error:
                     fallback_reason = str(result.error)
                 elif not self._validate_generated_answer(result.text, known_citations):
@@ -560,9 +618,38 @@ class RagService:
                     generation_mode = str(result.backend or "deterministic")
 
         if not generated_answer:
-            generated_answer = self._deterministic_answer(chunks, citations)
+            if not allow_fallback and raw_generated_attempt:
+                generated_answer = raw_generated_attempt
+                generation_mode = str("ollama" if ollama_cfg.enabled else "llama.cpp" if generation_cfg.enabled else "deterministic")
+                fallback_reason = ""
+            else:
+                generated_answer = self._deterministic_answer(chunks, citations)
         total_ms = round((time.perf_counter() - total_started) * 1000.0, 2)
-        citations_used = len({cid for cid in re.findall(r"\[(C\d+)\]", generated_answer)})
+        inline_citations = {cid for cid in re.findall(r"\[(C\d+)\]", generated_answer)}
+        if inline_citations:
+            citations_used = len(inline_citations)
+        else:
+            sources_used = set()
+            for match in re.finditer(r"^\s*SourcesUsed\s*:\s*(.+)$", generated_answer, flags=re.IGNORECASE | re.MULTILINE):
+                sources_used.update(re.findall(r"\b(C\d+)\b", str(match.group(1) or "")))
+            citations_used = len(sources_used)
+        citation_coverage_ratio = 0.0
+        if citations:
+            citation_coverage_ratio = round(min(1.0, citations_used / max(1, len(citations))), 3)
+        top_retrieval_window = chunks[: min(5, len(chunks))]
+        avg_similarity = 0.0
+        avg_relevance = 0.0
+        if top_retrieval_window:
+            avg_similarity = round(
+                sum(float(item.get("similarity", 0.0) or 0.0) for item in top_retrieval_window)
+                / len(top_retrieval_window),
+                4,
+            )
+            avg_relevance = round(
+                sum(float(item.get("relevance_score", item.get("fused_score", 0.0)) or 0.0) for item in top_retrieval_window)
+                / len(top_retrieval_window),
+                4,
+            )
 
         return {
             "answer": generated_answer,
@@ -577,8 +664,15 @@ class RagService:
                 "generation_ms": generation_ms,
                 "retrieved_chunks": len(chunks),
                 "used_citations": citations_used,
+                "citation_coverage_ratio": citation_coverage_ratio,
                 "prompt_chars": prompt_chars,
                 "answer_chars": len(generated_answer),
+                "top_similarity": round(top_similarity, 4),
+                "top_relevance_score": round(top_relevance, 4),
+                "avg_top5_similarity": avg_similarity,
+                "avg_top5_relevance": avg_relevance,
+                "reranker_enabled": bool(cfg.reranker_enabled),
+                "hybrid_enabled": bool(cfg.hybrid_enabled),
                 "peak_rss_mb": self._peak_rss_mb(),
             },
         }

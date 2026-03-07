@@ -522,6 +522,26 @@ def sanitize_json_value(value: Any) -> Any:
     return value
 
 
+def _sample_body_preview(text: str, max_chars: int = 12000) -> str:
+    clean = str(text or "")
+    if len(clean) <= max_chars:
+        return clean
+    # Reduce front-of-book bias by mixing head/middle/tail coverage.
+    window = max(1200, max_chars // 3)
+    head = clean[:window]
+    mid_start = max(0, (len(clean) // 2) - (window // 2))
+    mid = clean[mid_start : mid_start + window]
+    tail = clean[max(0, len(clean) - window) :]
+    joined = (
+        head.strip()
+        + "\n\n... [middle excerpt] ...\n\n"
+        + mid.strip()
+        + "\n\n... [tail excerpt] ...\n\n"
+        + tail.strip()
+    )
+    return joined[:max_chars]
+
+
 # Many real-world PDFs are malformed; keep parser noise from flooding stdout.
 logging.getLogger("pypdf").setLevel(logging.ERROR)
 
@@ -799,7 +819,7 @@ def categorize_book(
         matched_keywords=matched,
         book_id=build_book_id(book_path),
         metadata_text=raw_metadata.strip(),
-        body_preview=(raw_body or "")[:12000],
+        body_preview=_sample_body_preview(raw_body or "", max_chars=12000),
         learning_mode=learning_mode,
     ), override_category
 
@@ -954,6 +974,25 @@ def build_semantic_chunks(
     step = max(1, safe_chunk_size - safe_chunk_overlap)
     chunks: List[ChunkRecord] = []
 
+    def _adjust_start_boundary(text: str, start_idx: int, max_shift: int = 80) -> int:
+        if start_idx <= 0:
+            return 0
+        left = max(0, start_idx - max_shift)
+        for pos in range(start_idx, left, -1):
+            if text[pos - 1].isspace() or text[pos - 1] in ".;:!?":
+                return pos
+        return start_idx
+
+    def _adjust_end_boundary(text: str, end_idx: int, max_shift: int = 140) -> int:
+        total = len(text)
+        if end_idx >= total:
+            return total
+        right = min(total, end_idx + max_shift)
+        for pos in range(end_idx, right):
+            if text[pos].isspace() or text[pos] in ".;:!?":
+                return pos + 1
+        return end_idx
+
     for record in records:
         body_text = (record.body_preview or "").strip()
         metadata_text = (record.metadata_text or "").strip()
@@ -967,15 +1006,17 @@ def build_semantic_chunks(
             total = len(source_text)
             chunk_order = 0
             for start_char in range(0, total, step):
-                end_char = min(total, start_char + safe_chunk_size)
-                if end_char <= start_char:
+                adjusted_start = _adjust_start_boundary(source_text, start_char)
+                end_char = min(total, adjusted_start + safe_chunk_size)
+                adjusted_end = _adjust_end_boundary(source_text, end_char)
+                if adjusted_end <= adjusted_start:
                     continue
-                chunk_text = source_text[start_char:end_char].strip()
+                chunk_text = source_text[adjusted_start:adjusted_end].strip()
                 if len(chunk_text) < 40:
                     continue
-                chunk_len = max(0, end_char - start_char)
+                chunk_len = max(0, adjusted_end - adjusted_start)
                 chunk_id = hashlib.sha1(
-                    f"{record.book_id}:{source_type}:{start_char}:{end_char}".encode("utf-8")
+                    f"{record.book_id}:{source_type}:{adjusted_start}:{adjusted_end}".encode("utf-8")
                 ).hexdigest()[:16]
                 chunks.append(
                     ChunkRecord(
@@ -987,8 +1028,8 @@ def build_semantic_chunks(
                         absolute_path=record.absolute_path,
                         source_type=source_type,
                         source_index=chunk_order,
-                        start_char=start_char,
-                        end_char=end_char,
+                        start_char=adjusted_start,
+                        end_char=adjusted_end,
                         chunk_order=chunk_order,
                         chunk_len=chunk_len,
                         section_label=source_type,
@@ -996,7 +1037,7 @@ def build_semantic_chunks(
                     )
                 )
                 chunk_order += 1
-                if end_char >= total:
+                if adjusted_end >= total:
                     break
     return chunks
 

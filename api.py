@@ -49,9 +49,9 @@ class RetrievalConfigPayload(BaseModel):
     lexical_weight: float = 0.3
     candidate_pool_size: int = 48
     final_top_k: int = 8
-    reranker_enabled: bool = False
-    reranker_model_name: Optional[str] = None
-    reranker_top_n: int = 24
+    reranker_enabled: bool = True
+    reranker_model_name: Optional[str] = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    reranker_top_n: int = 32
 
 
 class LlamaCppConfigPayload(BaseModel):
@@ -80,6 +80,7 @@ class RagRequest(BaseModel):
     query: str = Field(min_length=1)
     top_k: int = Field(default=8, ge=1)
     max_citations: int = Field(default=6, ge=1)
+    allow_fallback: bool = True
     filters: RagFiltersPayload = Field(default_factory=RagFiltersPayload)
     retrieval: RetrievalConfigPayload = Field(default_factory=RetrievalConfigPayload)
     llm: LlamaCppConfigPayload = Field(default_factory=LlamaCppConfigPayload)
@@ -335,6 +336,7 @@ def rag_answer(request: RagRequest, _identity: str = Depends(require_guardrails)
             retrieval_config=retrieval,
             llm_config=llm,
             ollama_config=ollama,
+            allow_fallback=bool(request.allow_fallback),
         )
     except HTTPException:
         raise
@@ -369,9 +371,10 @@ def rag_answer_langchain(request: RagRequest, _identity: str = Depends(require_g
                 retrieval_config=retrieval,
                 llm_config=llm,
                 ollama_config=ollama,
+                allow_fallback=bool(request.allow_fallback),
             )
             fallback["fallback_reason"] = "LangChain retriever returned no documents."
-            return AnswerResponse(**fallback)
+            return AnswerResponse(**_redact_answer_payload(fallback))
 
         citations = _build_citations_from_docs(docs, max_citations=int(request.max_citations))
         chain = build_lc_answer_chain(llm)
@@ -384,9 +387,10 @@ def rag_answer_langchain(request: RagRequest, _identity: str = Depends(require_g
                 retrieval_config=retrieval,
                 llm_config=llm,
                 ollama_config=ollama,
+                allow_fallback=bool(request.allow_fallback),
             )
             fallback["fallback_reason"] = "LangChain chain unavailable; used canonical RAG answer."
-            return AnswerResponse(**fallback)
+            return AnswerResponse(**_redact_answer_payload(fallback))
 
         context = build_context_from_documents(docs, max_docs=int(request.max_citations))
         generated = str(chain.invoke({"query": request.query.strip(), "context": context}) or "").strip()
@@ -400,6 +404,7 @@ def rag_answer_langchain(request: RagRequest, _identity: str = Depends(require_g
                 retrieval_config=retrieval,
                 llm_config=llm,
                 ollama_config=ollama,
+                allow_fallback=bool(request.allow_fallback),
             )
             fallback["fallback_reason"] = "LangChain output missing valid citation markers."
             return AnswerResponse(**_redact_answer_payload(fallback))
@@ -455,6 +460,7 @@ def rag_answer_stream(
                 ollama_config=ollama,
                 on_token=_on_token if bool(ollama.enabled or llm.enabled) else None,
                 should_cancel=cancel_event.is_set,
+                allow_fallback=bool(payload.allow_fallback),
             )
             if not cancel_event.is_set():
                 events.put({"type": "final", "response": _redact_answer_payload(response)})
