@@ -75,8 +75,14 @@ class _FakeRagService:
             },
         }
 
-    def _build_follow_ups(self):
+    def _build_follow_ups(self, *args, **kwargs):
+        _ = args
+        _ = kwargs
         return ["Compare these sources by theoretical depth and practical exercises."]
+
+    def _validate_generated_answer(self, text, known_citations):
+        inline = {"C1"} if "[C1]" in str(text) else set()
+        return bool(inline) and inline.issubset(set(known_citations))
 
 
 class RagApiTests(unittest.TestCase):
@@ -214,6 +220,101 @@ class RagApiTests(unittest.TestCase):
             text = response.read().decode("utf-8")
         self.assertIn('"type": "final"', text)
         self.assertNotIn("/tmp/a.pdf", text)
+
+    @patch("api.RagServiceRetriever")
+    @patch("api.build_lc_answer_chain", return_value=None)
+    @patch("api.get_rag_service")
+    def test_answer_lc_falls_back_when_chain_unavailable(
+        self,
+        mock_get_service,
+        _mock_chain,
+        mock_retriever_cls,
+    ) -> None:
+        fake = _FakeRagService()
+        mock_get_service.return_value = fake
+
+        class _Doc:
+            def __init__(self):
+                self.page_content = "Deep learning uses optimization and backpropagation."
+                self.metadata = {
+                    "title": "Deep Learning Theory",
+                    "book_id": "b1",
+                    "category": "DeepLearning",
+                    "learning_mode": "theory",
+                    "source_type": "body_preview",
+                    "source_index": 0,
+                    "start_char": 0,
+                    "end_char": 120,
+                    "chunk_order": 0,
+                    "chunk_len": 120,
+                    "similarity": 0.92,
+                }
+
+        class _Retriever:
+            def invoke(self, _query):
+                return [_Doc()]
+
+        mock_retriever_cls.return_value = _Retriever()
+        response = self.client.post(
+            "/rag/answer-lc",
+            json={"query": "deep learning foundations", "top_k": 4, "max_citations": 3},
+            headers=self.headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("fallback_reason", payload)
+        self.assertIn("LangChain chain unavailable", payload["fallback_reason"])
+        self.assertEqual(payload["citations"][0]["absolute_path"], "")
+
+    @patch("api.RagServiceRetriever")
+    @patch("api.build_lc_answer_chain")
+    @patch("api.get_rag_service")
+    def test_answer_lc_falls_back_on_invalid_citations(
+        self,
+        mock_get_service,
+        mock_build_chain,
+        mock_retriever_cls,
+    ) -> None:
+        fake = _FakeRagService()
+        mock_get_service.return_value = fake
+
+        class _Doc:
+            def __init__(self):
+                self.page_content = "Deep learning uses optimization and backpropagation."
+                self.metadata = {
+                    "title": "Deep Learning Theory",
+                    "book_id": "b1",
+                    "category": "DeepLearning",
+                    "learning_mode": "theory",
+                    "source_type": "body_preview",
+                    "source_index": 0,
+                    "start_char": 0,
+                    "end_char": 120,
+                    "chunk_order": 0,
+                    "chunk_len": 120,
+                    "similarity": 0.92,
+                }
+
+        class _Retriever:
+            def invoke(self, _query):
+                return [_Doc()]
+
+        mock_retriever_cls.return_value = _Retriever()
+
+        class _FakeChain:
+            def invoke(self, _payload):
+                return "Answer: This omits citation ids.\nSourcesUsed: X9"
+
+        mock_build_chain.return_value = _FakeChain()
+        response = self.client.post(
+            "/rag/answer-lc",
+            json={"query": "deep learning foundations", "top_k": 4, "max_citations": 3},
+            headers=self.headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("LangChain output missing valid citation markers.", payload["fallback_reason"])
+        self.assertEqual(payload["citations"][0]["absolute_path"], "")
 
 
 if __name__ == "__main__":
