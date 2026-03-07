@@ -2500,7 +2500,7 @@ def render_relationship_graph_page(
 
 
 def main() -> None:
-    st.set_page_config(page_title="Technical RAG Developer Dashboard", layout="wide")
+    st.set_page_config(page_title="BookMap RAG", layout="wide")
     st.markdown(
         """
 <style>
@@ -2538,7 +2538,7 @@ def main() -> None:
         """,
         unsafe_allow_html=True,
     )
-    st.title("Technical RAG Developer Dashboard")
+    st.title("BookMap RAG")
 
     index_dir = str(DEFAULT_INDEX_DIR)
     cover_cache_dir = str(DEFAULT_COVER_CACHE_DIR)
