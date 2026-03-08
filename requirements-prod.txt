@@ -1,0 +1,15 @@
+pypdf
+pyyaml
+numpy
+sentence-transformers
+streamlit
+pypdfium2
+ebooklib
+beautifulsoup4
+plotly
+fastapi
+uvicorn[standard]
+pydantic
+langchain
+langchain-core
+langchain-community
