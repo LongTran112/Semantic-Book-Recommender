@@ -1,0 +1,50 @@
+{"id":"Q001","query":"Recommend two books to learn deep learning fundamentals and explain why each is useful.","intent":"recommendation","expected_categories":["DeepLearning","MachineLearning"],"expected_behavior":"answer"}
+{"id":"Q002","query":"What is the difference between CNN and Vision Transformer according to my library?","intent":"compare","expected_categories":["CNN","Transformer-DeepLearning","ComputerVision"],"expected_behavior":"answer"}
+{"id":"Q003","query":"Give me a beginner path for large language models and prompt engineering.","intent":"learning_path","expected_categories":["LLM","Generative-AI","NLP"],"expected_behavior":"answer"}
+{"id":"Q004","query":"Summarize practical books for building RAG systems in production.","intent":"recommendation","expected_categories":["LLM","Generative-AI","Cloud-DevOps"],"expected_behavior":"answer"}
+{"id":"Q005","query":"Find books covering transfer learning and fine-tuning workflows.","intent":"retrieval","expected_categories":["Transfer-Learning","DeepLearning"],"expected_behavior":"answer"}
+{"id":"Q006","query":"Which books focus on GAN architectures like StyleGAN or CycleGAN?","intent":"retrieval","expected_categories":["GAN","Generative-AI"],"expected_behavior":"answer"}
+{"id":"Q007","query":"Give me resources to study signal processing with Fourier transforms.","intent":"recommendation","expected_categories":["Signal-Processing","Fourier-Transformers","Math-ElectricalEngineering"],"expected_behavior":"answer"}
+{"id":"Q008","query":"Compare books for DSP filter design versus control systems design.","intent":"compare","expected_categories":["Signal-Processing","Control-Systems"],"expected_behavior":"answer"}
+{"id":"Q009","query":"Suggest a roadmap from linear algebra to deep learning practice.","intent":"learning_path","expected_categories":["Math-Algebra","DeepLearning","MachineLearning"],"expected_behavior":"answer"}
+{"id":"Q010","query":"Which books are best for probability and statistics for machine learning?","intent":"recommendation","expected_categories":["Math-Statistics","MachineLearning"],"expected_behavior":"answer"}
+{"id":"Q011","query":"Find practical books on STM32 firmware development.","intent":"retrieval","expected_categories":["STM32","Embedded-Systems"],"expected_behavior":"answer"}
+{"id":"Q012","query":"Recommend books for Arduino and ESP32 IoT projects.","intent":"recommendation","expected_categories":["Arduino","ESP32","IoT"],"expected_behavior":"answer"}
+{"id":"Q013","query":"Give me a path to learn Raspberry Pi robotics from beginner to advanced.","intent":"learning_path","expected_categories":["Raspberry-Pi","Robotics","Embedded-Systems"],"expected_behavior":"answer"}
+{"id":"Q014","query":"Which books cover FPGA design using Verilog or VHDL?","intent":"retrieval","expected_categories":["FPGA"],"expected_behavior":"answer"}
+{"id":"Q015","query":"Compare embedded systems books focused on RTOS versus bare-metal programming.","intent":"compare","expected_categories":["Embedded-Systems"],"expected_behavior":"answer"}
+{"id":"Q016","query":"Recommend books on Linux system programming and POSIX internals.","intent":"recommendation","expected_categories":["Linux-SystemProgramming","OperatingSystems"],"expected_behavior":"answer"}
+{"id":"Q017","query":"What are good books for concurrent programming and synchronization patterns?","intent":"recommendation","expected_categories":["Concurrency","Parallel-Computing"],"expected_behavior":"answer"}
+{"id":"Q018","query":"Find resources for computer architecture, CPU pipelines, and cache coherence.","intent":"retrieval","expected_categories":["ComputerArchitecture"],"expected_behavior":"answer"}
+{"id":"Q019","query":"Suggest books to learn distributed systems consensus (Raft/Paxos).","intent":"recommendation","expected_categories":["DistributedSystems"],"expected_behavior":"answer"}
+{"id":"Q020","query":"Compare books for high-level system design and low-level design interviews.","intent":"compare","expected_categories":["System-Design","DistributedSystems"],"expected_behavior":"answer"}
+{"id":"Q021","query":"Recommend practical Docker and Docker Compose books from this library.","intent":"recommendation","expected_categories":["Docker","Cloud-DevOps"],"expected_behavior":"answer"}
+{"id":"Q022","query":"Find books to learn Kubernetes deployments and ingress concepts.","intent":"retrieval","expected_categories":["Kubernetes","Cloud-DevOps"],"expected_behavior":"answer"}
+{"id":"Q023","query":"Which books cover AWS architecture for production systems?","intent":"retrieval","expected_categories":["AWS","Cloud-DevOps"],"expected_behavior":"answer"}
+{"id":"Q024","query":"Suggest DevOps books for CI/CD and reliability engineering.","intent":"recommendation","expected_categories":["Cloud-DevOps"],"expected_behavior":"answer"}
+{"id":"Q025","query":"Recommend SQL books focused on query optimization and execution plans.","intent":"recommendation","expected_categories":["Advanced-SQL","SQL","Databases"],"expected_behavior":"answer"}
+{"id":"Q026","query":"Compare beginner SQL books with advanced SQL tuning books.","intent":"compare","expected_categories":["SQL","Advanced-SQL"],"expected_behavior":"answer"}
+{"id":"Q027","query":"Find database books that mention PostgreSQL and indexing strategy.","intent":"retrieval","expected_categories":["Databases","Advanced-SQL"],"expected_behavior":"answer"}
+{"id":"Q028","query":"Suggest books for graph databases or Cypher query language.","intent":"retrieval","expected_categories":["Databases"],"expected_behavior":"answer"}
+{"id":"Q029","query":"Recommend top books to learn Go concurrency patterns.","intent":"recommendation","expected_categories":["Go","Concurrency"],"expected_behavior":"answer"}
+{"id":"Q030","query":"Which Rust books best explain ownership, borrowing, and lifetimes?","intent":"retrieval","expected_categories":["Rust"],"expected_behavior":"answer"}
+{"id":"Q031","query":"Compare books for modern C++ build systems (CMake/Makefile) and tooling.","intent":"compare","expected_categories":["Build-C-CPP"],"expected_behavior":"answer"}
+{"id":"Q032","query":"Give me Python books suitable for rapid scripting and automation.","intent":"recommendation","expected_categories":["Python"],"expected_behavior":"answer"}
+{"id":"Q033","query":"Find Java books that cover Spring Boot and JVM internals.","intent":"retrieval","expected_categories":["Java"],"expected_behavior":"answer"}
+{"id":"Q034","query":"Recommend security books for threat modeling and vulnerability analysis.","intent":"recommendation","expected_categories":["Security"],"expected_behavior":"answer"}
+{"id":"Q035","query":"Which books in my library teach penetration testing offensively?","intent":"retrieval","expected_categories":["Security"],"expected_behavior":"answer"}
+{"id":"Q036","query":"Suggest resources for cryptography basics for software engineers.","intent":"recommendation","expected_categories":["Security"],"expected_behavior":"answer"}
+{"id":"Q037","query":"Find books on electrical power systems and high-voltage engineering.","intent":"retrieval","expected_categories":["Power-Systems","Electrical-Engineering"],"expected_behavior":"answer"}
+{"id":"Q038","query":"Compare communication systems books focused on OFDM and MIMO.","intent":"compare","expected_categories":["Communication-Systems"],"expected_behavior":"answer"}
+{"id":"Q039","query":"Recommend books for electromagnetics and RF antenna design.","intent":"recommendation","expected_categories":["Electromagnetics-RF","Electromagnetic-ElectricalEngineering"],"expected_behavior":"answer"}
+{"id":"Q040","query":"Find semiconductor books that cover CMOS and VLSI design.","intent":"retrieval","expected_categories":["Semiconductor"],"expected_behavior":"answer"}
+{"id":"Q041","query":"Give me beginner books to learn German language grammar and vocabulary.","intent":"recommendation","expected_categories":["German-Language"],"expected_behavior":"answer"}
+{"id":"Q042","query":"Which books prepare for Goethe certificate B1 to C1?","intent":"retrieval","expected_categories":["German-Language"],"expected_behavior":"answer"}
+{"id":"Q043","query":"Recommend robotics books covering ROS2, SLAM, and motion planning.","intent":"recommendation","expected_categories":["Robotics"],"expected_behavior":"answer"}
+{"id":"Q044","query":"Compare CUDA programming resources with parallel computing resources.","intent":"compare","expected_categories":["CUDA","Parallel-Computing"],"expected_behavior":"answer"}
+{"id":"Q045","query":"Find books on computer graphics rendering and shader programming.","intent":"retrieval","expected_categories":["Computer-Graphics"],"expected_behavior":"answer"}
+{"id":"Q046","query":"What books in my library discuss Bayesian statistics for ML?","intent":"retrieval","expected_categories":["Math-Statistics","MachineLearning"],"expected_behavior":"answer"}
+{"id":"Q047","query":"Explain quantum chemistry simulation on DNA origami from my library with citations.","intent":"out_of_scope","expected_categories":["Other"],"expected_behavior":"insufficient_evidence"}
+{"id":"Q048","query":"Find references about iOS SwiftUI animation architecture in my current books.","intent":"out_of_scope","expected_categories":["Other"],"expected_behavior":"insufficient_evidence"}
+{"id":"Q049","query":"Summarize legal compliance books for EU tax accounting law from my technical library.","intent":"out_of_scope","expected_categories":["Other"],"expected_behavior":"insufficient_evidence"}
+{"id":"Q050","query":"Give me citations for marine biology coral reef restoration methods from this library.","intent":"out_of_scope","expected_categories":["Other"],"expected_behavior":"insufficient_evidence"}
