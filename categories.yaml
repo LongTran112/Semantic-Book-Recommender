@@ -38,6 +38,7 @@ category_order:
   - Embedded-Systems
   - FPGA
   - KiCad
+  - PCB-Design
   - Linux-SystemProgramming
   - Build-C-CPP
   - System-Design
@@ -462,6 +463,19 @@ categories:
     - footprint
     - gerber
     - electronics cad
+  PCB-Design:
+    - pcb design
+    - printed circuit board
+    - pcb layout
+    - pcb routing
+    - schematic capture
+    - gerber files
+    - via stitching
+    - differential pair routing
+    - impedance control
+    - altium designer
+    - eagle cad
+    - pcb manufacturing
   Linux-SystemProgramming:
     - linux programming
     - system programming
