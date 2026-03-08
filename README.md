@@ -393,3 +393,45 @@ Production docs are now included:
 - `RUNBOOK.md` - operations playbooks (health checks, indexing refresh, incidents, backup/restore).
 - `docker-compose.yml` - production stack (`api`, `dashboard`, `ollama`, `nginx`).
 - `.env.example` - runtime environment template for secrets and guardrails.
+
+## RAG Evaluation Harness (50 Questions)
+
+Run a repeatable quality check for grounded RAG answers using:
+
+- golden set: `eval/golden_questions_50.jsonl`
+- evaluator: `scripts/evaluate_rag.py`
+- reviewer template: `eval/human_review_template.csv`
+
+Direct service mode (no API server required):
+
+```bash
+.venv/bin/python scripts/evaluate_rag.py \
+  --mode direct \
+  --questions eval/golden_questions_50.jsonl \
+  --output-dir output/eval
+```
+
+API mode (requires FastAPI running and `RAG_API_KEY`):
+
+```bash
+export RAG_API_KEY="change-this-internal-key"
+.venv/bin/python scripts/evaluate_rag.py \
+  --mode api \
+  --api-url "http://127.0.0.1:8000" \
+  --api-key "${RAG_API_KEY}" \
+  --questions eval/golden_questions_50.jsonl \
+  --output-dir output/eval
+```
+
+Generated artifacts:
+
+- `output/eval/latest_results.json` (per-question responses + score signals)
+- `output/eval/summary.md` (pass rates, failure buckets, latency/fallback stats)
+- `output/eval/human_review_candidates.csv` (borderline cases for manual review)
+
+Suggested acceptance targets:
+
+- grounded answers with valid citations >= 90%
+- correct/acceptable answers on human-reviewed sample >= 80%
+- low-evidence queries should prefer safe fallback over hallucination
+- stable p95 latency under your runtime budget
