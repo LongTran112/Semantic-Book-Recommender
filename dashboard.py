@@ -10,6 +10,7 @@ import html
 from io import BytesIO
 import json
 import math
+import os
 import platform
 import re
 import shutil
@@ -2002,13 +2003,13 @@ def render_ask_books_rag_page(
         )
         ollama_base_url = st.text_input(
             "Ollama base URL",
-            value="http://127.0.0.1:11434",
+            value=str(os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")),
             key="rag-ollama-base-url",
             disabled=generation_mode != "ollama",
         )
         ollama_model = st.text_input(
             "Ollama model tag",
-        value="deepseek-r1:14b",
+            value="deepseek-r1:14b",
             key="rag-ollama-model",
             disabled=generation_mode != "ollama",
         )

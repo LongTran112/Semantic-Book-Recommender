@@ -384,3 +384,12 @@ For large libraries, keep the graph responsive with:
 - **No relevant results**: lower the similarity threshold in the dashboard sidebar.
 - **Definition quality is weak**: rebuild with `--extraction-profile deep` and add category overrides for target domains (`Arduino`, `SQL`, `DeepLearning`), then rebuild `output/semantic_index_chunks/`.
 - **Indexing is too slow**: switch to `--extraction-profile fast` for iteration, and use `deep` only for final quality rebuilds.
+
+## Production Deployment
+
+Production docs are now included:
+
+- `DEPLOYMENT.md` - single VM Docker Compose deployment, TLS, security, and upgrades.
+- `RUNBOOK.md` - operations playbooks (health checks, indexing refresh, incidents, backup/restore).
+- `docker-compose.yml` - production stack (`api`, `dashboard`, `ollama`, `nginx`).
+- `.env.example` - runtime environment template for secrets and guardrails.

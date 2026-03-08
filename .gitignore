@@ -1,5 +1,10 @@
 .DS_Store
 __pycache__/
 .venv/
+.env
+deploy/certs/
+deploy/logs/
+deploy/backups/
+deploy/nginx/htpasswd
 output/.~lock.*
 output/covers/
