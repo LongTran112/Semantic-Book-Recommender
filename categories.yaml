@@ -21,6 +21,7 @@ category_order:
   - ESP32
   - Raspberry-Pi
   - Jetson-Nano
+  - 3D-Printing
   - IoT
   - Electronics
   - Circuit-Design-Analysis
@@ -283,6 +284,18 @@ categories:
     - nvidia jetson
     - jetpack
     - cuda on jetson
+  3D-Printing:
+    - 3d printing
+    - 3d printer
+    - additive manufacturing
+    - fdm
+    - sla
+    - sls
+    - prusa
+    - prusaslicer
+    - cura slicer
+    - gcode
+    - stl file
   IoT:
     - iot
     - internet of things
