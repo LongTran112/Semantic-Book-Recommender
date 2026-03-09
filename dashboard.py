@@ -10,7 +10,9 @@ import html
 from io import BytesIO
 import json
 import math
+import os
 import platform
+import re
 import shutil
 import subprocess
 import urllib.error
@@ -84,19 +86,21 @@ RAG_RETRIEVAL_PRESETS: Dict[str, Dict[str, Any]] = {
 RAG_PERFORMANCE_PROFILES: Dict[str, Dict[str, Any]] = {
     "Fast": {
         "generation_mode": "ollama",
-        "ollama_model": "deepseek-r1-local:latest",
+        "ollama_model": "granite3.3:8b",
         "ollama_num_ctx": 4096,
         "ollama_temp": 0.15,
         "ollama_top_p": 0.85,
         "ollama_timeout_sec": 180,
         "top_k_chunks": 4,
         "max_citations": 3,
-        "candidate_pool_size": 24,
-        "min_similarity": 0.2,
+        "candidate_pool_size": 32,
+        "min_similarity": 0.16,
+        "reranker_enabled": True,
+        "reranker_top_n": 24,
     },
     "Balanced": {
         "generation_mode": "ollama",
-        "ollama_model": "deepseek-r1-local:latest",
+        "ollama_model": "granite3.3:8b",
         "ollama_num_ctx": 6144,
         "ollama_temp": 0.2,
         "ollama_top_p": 0.9,
@@ -105,6 +109,8 @@ RAG_PERFORMANCE_PROFILES: Dict[str, Dict[str, Any]] = {
         "max_citations": 4,
         "candidate_pool_size": 40,
         "min_similarity": 0.12,
+        "reranker_enabled": True,
+        "reranker_top_n": 32,
     },
     "Quality": {
         "generation_mode": "ollama",
@@ -117,6 +123,8 @@ RAG_PERFORMANCE_PROFILES: Dict[str, Dict[str, Any]] = {
         "max_citations": 6,
         "candidate_pool_size": 64,
         "min_similarity": 0.08,
+        "reranker_enabled": True,
+        "reranker_top_n": 40,
     },
 }
 RAG_LATENCY_TARGET_MS = 25000.0
@@ -1155,6 +1163,8 @@ def _apply_rag_performance_profile(profile_name: str) -> None:
     st.session_state["rag-max-citations"] = int(profile["max_citations"])
     st.session_state["rag-candidate-pool"] = int(profile["candidate_pool_size"])
     st.session_state["rag-min-similarity"] = float(profile["min_similarity"])
+    st.session_state["rag-reranker-enabled"] = bool(profile.get("reranker_enabled", True))
+    st.session_state["rag-reranker-topn"] = int(profile.get("reranker_top_n", 32))
 
 
 def _select_rag_auto_profile(query: str) -> str:
@@ -1172,8 +1182,8 @@ def _select_rag_auto_profile(query: str) -> str:
         "deep dive",
         "comprehensive",
     )
-    if any(marker in q for marker in definition_markers) and len(q) <= RAG_AUTO_FAST_MAX_QUERY_CHARS:
-        return "Fast"
+    if any(marker in q for marker in definition_markers):
+        return "Balanced"
     if any(marker in q for marker in complex_markers) or len(q) > RAG_AUTO_BALANCED_MAX_QUERY_CHARS:
         return "Quality"
     return "Balanced"
@@ -1207,11 +1217,13 @@ def _build_rag_answer_payload(
     ollama_top_p: float,
     ollama_num_ctx: int,
     ollama_timeout_sec: int,
+    allow_fallback: bool,
 ) -> Dict[str, Any]:
     return {
         "query": query.strip(),
         "top_k": int(top_k_chunks),
         "max_citations": int(max_citations),
+        "allow_fallback": bool(allow_fallback),
         "filters": {
             "categories": selected_categories or None,
             "learning_modes": selected_modes or None,
@@ -1271,7 +1283,13 @@ def _call_rag_api_answer(api_url: str, payload: Dict[str, Any], timeout_sec: int
         raise RuntimeError(f"Could not reach API endpoint: {exc}") from exc
 
 
-def _render_rag_chat_response(turn_idx: int, response: Dict[str, Any], show_debug: bool) -> None:
+def _render_rag_chat_response(
+    turn_idx: int,
+    response: Dict[str, Any],
+    show_debug: bool,
+    blur_meta_text: bool,
+    show_fallback_notice: bool,
+) -> None:
     st.caption(f"Generation mode: {response.get('generation_mode', 'deterministic')}")
     metrics = response.get("metrics", {}) or {}
     if isinstance(metrics, dict) and metrics:
@@ -1279,19 +1297,21 @@ def _render_rag_chat_response(turn_idx: int, response: Dict[str, Any], show_debu
         retrieval_ms = float(metrics.get("retrieval_ms", 0.0) or 0.0)
         generation_ms = float(metrics.get("generation_ms", 0.0) or 0.0)
         peak_rss_mb = float(metrics.get("peak_rss_mb", 0.0) or 0.0)
+        top_relevance = float(metrics.get("top_relevance_score", 0.0) or 0.0)
+        citation_coverage = float(metrics.get("citation_coverage_ratio", 0.0) or 0.0)
         st.caption(
             "Timing: "
             f"total {total_ms:.1f} ms | retrieval {retrieval_ms:.1f} ms | generation {generation_ms:.1f} ms | "
-            f"peak RSS {peak_rss_mb:.1f} MB"
+            f"peak RSS {peak_rss_mb:.1f} MB | top relevance {top_relevance:.3f} | citation coverage {citation_coverage:.2f}"
         )
         with st.expander("Answer diagnostics", expanded=False):
             st.json(metrics)
     fallback_reason = str(response.get("fallback_reason", "") or "").strip()
-    if fallback_reason:
+    if fallback_reason and show_fallback_notice:
         st.info(f"Fallback used: {fallback_reason}")
 
     st.markdown("**Answer**")
-    st.write(response.get("answer", ""))
+    _render_answer_with_blur(str(response.get("answer", "") or ""), hide_meta_text=blur_meta_text)
     st.markdown("**Summary**")
     st.write(response.get("summary", ""))
 
@@ -1344,22 +1364,211 @@ def _render_rag_chat_response(turn_idx: int, response: Dict[str, Any], show_debu
             st.json(response)
 
 
-def _render_rag_perf_rollup(chat_history: List[Dict[str, Any]], window: int = 10) -> None:
-    recent = chat_history[-max(1, int(window)) :]
-    metrics_rows: List[Dict[str, float]] = []
-    for item in recent:
-        response = item.get("response", {})
-        metrics = response.get("metrics", {}) if isinstance(response, dict) else {}
-        if not isinstance(metrics, dict) or not metrics:
-            continue
-        metrics_rows.append(
-            {
-                "total_ms": float(metrics.get("total_ms", 0.0) or 0.0),
-                "retrieval_ms": float(metrics.get("retrieval_ms", 0.0) or 0.0),
-                "generation_ms": float(metrics.get("generation_ms", 0.0) or 0.0),
-                "peak_rss_mb": float(metrics.get("peak_rss_mb", 0.0) or 0.0),
-            }
+def _split_answer_display_sections(answer_text: str) -> Tuple[str, str]:
+    text = str(answer_text or "").replace("\r\n", "\n")
+    if not text.strip():
+        return "", ""
+
+    lines = text.split("\n")
+    final_markers = (
+        "answer:",
+        "formal definition:",
+        "plain-language intuition:",
+        "practical use-case:",
+    )
+    blur_prefixes = (
+        "sourcesused:",
+        "summary",
+        "grounded from",
+        "suggested follow-ups",
+        "insufficient sources:",
+        "thinking process:",
+        "generating grounded answer",
+    )
+    reasoning_markers = (
+        "so, i need to",
+        "let me",
+        "alright, i need",
+        "okay, so i need",
+        "the user wants",
+    )
+
+    answer_start_idx = -1
+    for idx, line in enumerate(lines):
+        if str(line or "").strip().lower().startswith(final_markers):
+            answer_start_idx = idx
+            break
+
+    think_close_idx = -1
+    for idx, line in enumerate(lines):
+        if "</think>" in str(line or "").lower():
+            think_close_idx = idx
+            break
+
+    blur_lines: List[str] = []
+    normal_lines: List[str] = []
+    for idx, raw_line in enumerate(lines):
+        stripped = str(raw_line or "").strip()
+        lowered = stripped.lower()
+        is_blur = False
+        if think_close_idx >= 0 and idx <= think_close_idx:
+            is_blur = True
+        elif answer_start_idx >= 0 and idx < answer_start_idx:
+            is_blur = True
+        elif lowered.startswith(blur_prefixes):
+            is_blur = True
+        elif any(marker in lowered for marker in reasoning_markers):
+            is_blur = True
+
+        if is_blur:
+            if stripped:
+                blur_lines.append(raw_line)
+        else:
+            if stripped:
+                normal_lines.append(raw_line)
+
+    return "\n".join(normal_lines).strip(), "\n".join(blur_lines).strip()
+
+
+def _normalize_answer_markdown(text: str) -> str:
+    clean = str(text or "").replace("\r\n", "\n").strip()
+    if not clean:
+        return ""
+
+    # Normalize malformed bold wrappers, e.g. "** Formal Definition: **" -> "Formal Definition:".
+    clean = re.sub(r"\*\*\s*([^*]+?)\s*\*\*", r"\1", clean)
+
+    # Canonicalize frequent metadata labels.
+    clean = re.sub(r"\bSources\s*Used\s*:", "SourcesUsed:", clean, flags=re.IGNORECASE)
+
+    # Insert section breaks before common labels wherever they appear inline.
+    section_labels = [
+        (r"answer\s*:", "Answer"),
+        (r"formal\s*definition\s*:", "Formal Definition"),
+        (r"plain\s*[-\s]?language\s*intuition\s*:", "Plain-language Intuition"),
+        (r"practical\s*use\s*[-\s]?case\s*:", "Practical Use-Case"),
+        (r"sourcesused\s*:", "SourcesUsed"),
+        (r"summary\s*:", "Summary"),
+    ]
+    for raw_pattern, label in section_labels:
+        clean = re.sub(
+            rf"(?is)\s*{raw_pattern}\s*",
+            f"\n\n### {label}\n\n",
+            clean,
         )
+
+    # Ensure numbered steps become block-separated list items.
+    clean = re.sub(r"(?<!\n)(\d+\.)\s+", r"\n\n\1 ", clean)
+
+    # If model returned a single huge paragraph, split by sentence boundaries.
+    if "\n" not in clean and len(clean) > 280:
+        clean = re.sub(r"(?<=[.!?])\s+(?=[A-Z0-9*])", "\n\n", clean)
+
+    # Normalize spacing around headings and trim heading-only noise.
+    clean = re.sub(r"[ \t]+\n", "\n", clean)
+    clean = re.sub(r"\n{3,}", "\n\n", clean).strip()
+    return clean
+
+
+def _render_answer_with_blur(
+    answer_text: str,
+    *,
+    placeholder: Optional[Any] = None,
+    show_cursor: bool = False,
+    hide_meta_text: bool = True,
+) -> None:
+    render_text = _normalize_answer_markdown(str(answer_text or ""))
+    if hide_meta_text:
+        normal_text, _blurred_text = _split_answer_display_sections(render_text)
+        render_text = normal_text
+
+    # Keep markdown syntax from model output (e.g. **bold**) intact.
+    if show_cursor:
+        render_text = (render_text.rstrip() + "\n\n▌").strip()
+    if not render_text.strip():
+        render_text = " "
+
+    if not hide_meta_text:
+        if placeholder is None:
+            st.markdown(render_text)
+        else:
+            placeholder.markdown(render_text)
+        return
+
+    if placeholder is None:
+        st.markdown(render_text)
+    else:
+        placeholder.markdown(render_text)
+
+
+def _metrics_row_from_response(
+    response: Dict[str, Any],
+    *,
+    answer_idx: int,
+    query: str = "",
+) -> Optional[Dict[str, Any]]:
+    metrics = response.get("metrics", {}) if isinstance(response, dict) else {}
+    if not isinstance(metrics, dict) or not metrics:
+        return None
+    return {
+        "answer_idx": int(answer_idx),
+        "query": query[:120] + ("..." if len(query) > 120 else ""),
+        "total_ms": float(metrics.get("total_ms", 0.0) or 0.0),
+        "retrieval_ms": float(metrics.get("retrieval_ms", 0.0) or 0.0),
+        "generation_ms": float(metrics.get("generation_ms", 0.0) or 0.0),
+        "peak_rss_mb": float(metrics.get("peak_rss_mb", 0.0) or 0.0),
+        "retrieved_chunks": int(metrics.get("retrieved_chunks", 0) or 0),
+        "used_citations": int(metrics.get("used_citations", 0) or 0),
+        "citation_coverage_ratio": float(metrics.get("citation_coverage_ratio", 0.0) or 0.0),
+        "top_similarity": float(metrics.get("top_similarity", 0.0) or 0.0),
+        "top_relevance_score": float(metrics.get("top_relevance_score", 0.0) or 0.0),
+        "prompt_chars": int(metrics.get("prompt_chars", 0) or 0),
+        "answer_chars": int(metrics.get("answer_chars", 0) or 0),
+    }
+
+
+def _append_rag_metrics(question: str, response: Dict[str, Any]) -> None:
+    history = st.session_state.get("rag-metrics-history", [])
+    if not isinstance(history, list):
+        history = []
+    next_idx = len(history) + 1
+    row = _metrics_row_from_response(response, answer_idx=next_idx, query=str(question or ""))
+    if row is None:
+        return
+    history.append(row)
+    st.session_state["rag-metrics-history"] = history[-200:]
+
+
+def _collect_recent_rag_metrics(chat_history: List[Dict[str, Any]], window: int = 10) -> List[Dict[str, Any]]:
+    # Preferred source: dedicated in-memory metrics history.
+    metrics_history = st.session_state.get("rag-metrics-history", [])
+    if isinstance(metrics_history, list) and metrics_history:
+        recent_metrics = metrics_history[-max(1, int(window)) :]
+        rows: List[Dict[str, Any]] = []
+        for idx, row in enumerate(recent_metrics, start=1):
+            if not isinstance(row, dict):
+                continue
+            clean = dict(row)
+            clean["answer_idx"] = idx
+            rows.append(clean)
+        if rows:
+            return rows
+
+    # Backward compatibility: derive rows from chat history when metrics history is missing.
+    recent = chat_history[-max(1, int(window)) :]
+    rows = []
+    for idx, item in enumerate(recent, start=1):
+        response = item.get("response", {})
+        query = str(item.get("question", "") or "").strip()
+        row = _metrics_row_from_response(response, answer_idx=idx, query=query)
+        if row is None:
+            continue
+        rows.append(row)
+    return rows
+
+
+def _render_rag_perf_rollup(chat_history: List[Dict[str, Any]], window: int = 10) -> None:
+    metrics_rows = _collect_recent_rag_metrics(chat_history=chat_history, window=window)
     if not metrics_rows:
         return
 
@@ -1368,11 +1577,186 @@ def _render_rag_perf_rollup(chat_history: List[Dict[str, Any]], window: int = 10
     avg_retrieval = sum(row["retrieval_ms"] for row in metrics_rows) / count
     avg_generation = sum(row["generation_ms"] for row in metrics_rows) / count
     max_rss = max(row["peak_rss_mb"] for row in metrics_rows)
+    avg_relevance = sum(row["top_relevance_score"] for row in metrics_rows) / count
+    avg_coverage = sum(row["citation_coverage_ratio"] for row in metrics_rows) / count
     st.caption(
         f"Recent performance (last {count} answers): avg total {avg_total:.1f} ms | "
         f"avg retrieval {avg_retrieval:.1f} ms | avg generation {avg_generation:.1f} ms | "
-        f"max peak RSS {max_rss:.1f} MB"
+        f"max peak RSS {max_rss:.1f} MB | avg relevance {avg_relevance:.3f} | "
+        f"avg citation coverage {avg_coverage:.2f}"
     )
+
+
+def render_rag_metrics_page() -> None:
+    st.header("RAG Metrics")
+    st.caption("In-memory performance charts for the last 10 answers. Metrics reset when the app restarts.")
+
+    chat_history = st.session_state.get("rag-chat-history", [])
+    if not isinstance(chat_history, list):
+        chat_history = []
+    rows = _collect_recent_rag_metrics(chat_history=chat_history, window=10)
+    if not rows:
+        st.info(
+            "No recent answer metrics yet. Go to Ask Books (RAG), submit questions, then return to this page."
+        )
+        return
+
+    frame = pd.DataFrame(rows)
+    avg_total = float(frame["total_ms"].mean())
+    avg_retrieval = float(frame["retrieval_ms"].mean())
+    avg_generation = float(frame["generation_ms"].mean())
+    max_rss = float(frame["peak_rss_mb"].max())
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Avg total (ms)", f"{avg_total:.1f}")
+    c2.metric("Avg retrieval (ms)", f"{avg_retrieval:.1f}")
+    c3.metric("Avg generation (ms)", f"{avg_generation:.1f}")
+    c4.metric("Max peak RSS (MB)", f"{max_rss:.1f}")
+
+    export_cols = [
+        "answer_idx",
+        "query",
+        "total_ms",
+        "retrieval_ms",
+        "generation_ms",
+        "peak_rss_mb",
+        "retrieved_chunks",
+        "used_citations",
+        "citation_coverage_ratio",
+        "top_similarity",
+        "top_relevance_score",
+        "prompt_chars",
+        "answer_chars",
+    ]
+    export_df = frame[export_cols].copy()
+    csv_bytes = export_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Download last 10 metrics (CSV)",
+        data=csv_bytes,
+        file_name="rag_last10_metrics.csv",
+        mime="text/csv",
+        key="rag-metrics-download-csv",
+        help="Exports only in-memory metrics from the current app session.",
+    )
+
+    st.subheader("Latency Trend (Last 10 Answers)")
+    if go is not None:
+        fig_latency = go.Figure()
+        fig_latency.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["total_ms"],
+                mode="lines+markers",
+                name="total_ms",
+            )
+        )
+        fig_latency.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["retrieval_ms"],
+                mode="lines+markers",
+                name="retrieval_ms",
+            )
+        )
+        fig_latency.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["generation_ms"],
+                mode="lines+markers",
+                name="generation_ms",
+            )
+        )
+        fig_latency.update_layout(
+            xaxis_title="Answer # (recent)",
+            yaxis_title="Milliseconds",
+            margin=dict(l=20, r=20, t=30, b=20),
+            legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig_latency, use_container_width=True)
+    else:
+        st.line_chart(
+            frame.set_index("answer_idx")[["total_ms", "retrieval_ms", "generation_ms"]],
+            use_container_width=True,
+        )
+
+    st.subheader("Resource and Payload Signals")
+    if go is not None:
+        fig_resource = go.Figure()
+        fig_resource.add_trace(
+            go.Bar(
+                x=frame["answer_idx"],
+                y=frame["peak_rss_mb"],
+                name="peak_rss_mb",
+            )
+        )
+        fig_resource.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["retrieved_chunks"],
+                mode="lines+markers",
+                name="retrieved_chunks",
+                yaxis="y2",
+            )
+        )
+        fig_resource.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["used_citations"],
+                mode="lines+markers",
+                name="used_citations",
+                yaxis="y2",
+            )
+        )
+        fig_resource.update_layout(
+            xaxis_title="Answer # (recent)",
+            yaxis=dict(title="Peak RSS (MB)"),
+            yaxis2=dict(title="Counts", overlaying="y", side="right"),
+            margin=dict(l=20, r=20, t=30, b=20),
+            legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig_resource, use_container_width=True)
+    else:
+        st.bar_chart(frame.set_index("answer_idx")[["peak_rss_mb"]], use_container_width=True)
+        st.line_chart(frame.set_index("answer_idx")[["retrieved_chunks", "used_citations"]], use_container_width=True)
+
+    st.subheader("Grounding Quality Signals")
+    if go is not None:
+        fig_quality = go.Figure()
+        fig_quality.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["top_relevance_score"],
+                mode="lines+markers",
+                name="top_relevance_score",
+            )
+        )
+        fig_quality.add_trace(
+            go.Scatter(
+                x=frame["answer_idx"],
+                y=frame["citation_coverage_ratio"],
+                mode="lines+markers",
+                name="citation_coverage_ratio",
+            )
+        )
+        fig_quality.update_layout(
+            xaxis_title="Answer # (recent)",
+            yaxis_title="Score (0-1)",
+            margin=dict(l=20, r=20, t=30, b=20),
+            legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig_quality, use_container_width=True)
+    else:
+        st.line_chart(
+            frame.set_index("answer_idx")[["top_relevance_score", "citation_coverage_ratio"]],
+            use_container_width=True,
+        )
+
+    with st.expander("Last 10 metrics table", expanded=False):
+        st.dataframe(
+            export_df,
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 def render_ask_books_rag_page(
@@ -1385,269 +1769,296 @@ def render_ask_books_rag_page(
 
     if "rag-chat-history" not in st.session_state:
         st.session_state["rag-chat-history"] = []
+    if "rag-metrics-history" not in st.session_state:
+        st.session_state["rag-metrics-history"] = []
     if "rag-pending-question" not in st.session_state:
         st.session_state["rag-pending-question"] = ""
     if "rag-pinned-preset" not in st.session_state:
         st.session_state["rag-pinned-preset"] = ""
 
-    st.subheader("Conversation Controls")
-    preset_names = list(RAG_RETRIEVAL_PRESETS.keys())
-    default_preset_name = str(st.session_state.get("rag-pinned-preset", "") or "Definition Q&A")
-    if default_preset_name not in RAG_RETRIEVAL_PRESETS:
-        default_preset_name = "Definition Q&A"
-    preset_idx = preset_names.index(default_preset_name)
-    chosen_preset = st.selectbox(
-        "Retrieval preset",
-        options=preset_names,
-        index=preset_idx,
-        key="rag-preset-choice",
-    )
-    controls_col1, controls_col2, controls_col3 = st.columns(3)
-    with controls_col1:
-        if st.button("Apply preset", key="rag-apply-preset"):
-            _apply_rag_retrieval_preset(chosen_preset)
-            st.rerun()
-    with controls_col2:
-        pinned = str(st.session_state.get("rag-pinned-preset", "") or "")
-        pin_label = "Unpin preset" if pinned == chosen_preset else "Pin preset"
-        if st.button(pin_label, key="rag-pin-preset"):
-            if pinned == chosen_preset:
-                st.session_state["rag-pinned-preset"] = ""
+    with st.sidebar:
+        st.subheader("Conversation Controls")
+        preset_names = list(RAG_RETRIEVAL_PRESETS.keys())
+        default_preset_name = str(st.session_state.get("rag-pinned-preset", "") or "Definition Q&A")
+        if default_preset_name not in RAG_RETRIEVAL_PRESETS:
+            default_preset_name = "Definition Q&A"
+        preset_idx = preset_names.index(default_preset_name)
+        chosen_preset = st.selectbox(
+            "Retrieval preset",
+            options=preset_names,
+            index=preset_idx,
+            key="rag-preset-choice",
+        )
+        controls_col1, controls_col2, controls_col3 = st.columns(3)
+        with controls_col1:
+            if st.button("Apply preset", key="rag-apply-preset"):
+                _apply_rag_retrieval_preset(chosen_preset)
+                st.rerun()
+        with controls_col2:
+            pinned = str(st.session_state.get("rag-pinned-preset", "") or "")
+            pin_label = "Unpin preset" if pinned == chosen_preset else "Pin preset"
+            if st.button(pin_label, key="rag-pin-preset"):
+                if pinned == chosen_preset:
+                    st.session_state["rag-pinned-preset"] = ""
+                else:
+                    st.session_state["rag-pinned-preset"] = chosen_preset
+                st.rerun()
+        with controls_col3:
+            if st.button("Clear chat", key="rag-clear-chat"):
+                st.session_state["rag-chat-history"] = []
+                st.session_state["rag-pending-question"] = ""
+                st.rerun()
+
+        profile_names = ["Auto"] + list(RAG_PERFORMANCE_PROFILES.keys())
+        selected_profile = st.selectbox(
+            "Performance profile",
+            options=profile_names,
+            index=0,
+            key="rag-performance-profile",
+            help=(
+                "Auto routes query complexity to Fast/Balanced/Quality. "
+                f"Target interactive latency: <= {int(RAG_LATENCY_TARGET_MS)} ms."
+            ),
+        )
+        if st.button("Apply performance profile", key="rag-apply-performance-profile"):
+            if selected_profile == "Auto":
+                st.session_state["rag-auto-profile-enabled"] = True
             else:
-                st.session_state["rag-pinned-preset"] = chosen_preset
-            st.rerun()
-    with controls_col3:
-        if st.button("Clear chat", key="rag-clear-chat"):
-            st.session_state["rag-chat-history"] = []
-            st.session_state["rag-pending-question"] = ""
+                st.session_state["rag-auto-profile-enabled"] = False
+                _apply_rag_performance_profile(selected_profile)
             st.rerun()
 
-    profile_names = ["Auto"] + list(RAG_PERFORMANCE_PROFILES.keys())
-    selected_profile = st.selectbox(
-        "Performance profile",
-        options=profile_names,
-        index=0,
-        key="rag-performance-profile",
-        help=(
-            "Auto routes query complexity to Fast/Balanced/Quality. "
-            f"Target interactive latency: <= {int(RAG_LATENCY_TARGET_MS)} ms."
-        ),
-    )
-    if st.button("Apply performance profile", key="rag-apply-performance-profile"):
-        if selected_profile == "Auto":
-            st.session_state["rag-auto-profile-enabled"] = True
-        else:
-            st.session_state["rag-auto-profile-enabled"] = False
-            _apply_rag_performance_profile(selected_profile)
-        st.rerun()
+        _render_rag_perf_rollup(st.session_state.get("rag-chat-history", []), window=10)
 
-    _render_rag_perf_rollup(st.session_state.get("rag-chat-history", []), window=10)
+        top_k_chunks = st.slider("Top chunks", min_value=4, max_value=20, value=8, step=2, key="rag-top-k-chunks")
+        max_citations = st.slider("Max citations", min_value=2, max_value=10, value=6, step=1, key="rag-max-citations")
+        min_similarity = st.slider(
+            "Min chunk similarity",
+            min_value=-1.0,
+            max_value=1.0,
+            value=0.15,
+            step=0.01,
+            key="rag-min-similarity",
+        )
+        show_debug = st.toggle("Show retrieval debug details", value=False, key="rag-show-debug")
+        blur_meta_text = st.toggle(
+            "Hide model thinking/meta text",
+            value=True,
+            key="rag-blur-meta-text",
+            help="When enabled, reasoning/meta lines such as SourcesUsed/Summary are hidden from answer text.",
+        )
+        show_fallback_notice = st.toggle(
+            "Show fallback notices",
+            value=True,
+            key="rag-show-fallback-notice",
+            help="Show/hide messages like: 'Fallback used: Generated answer missing valid citation markers.'",
+        )
+        disable_fallback = st.toggle(
+            "Disable deterministic fallback (advanced)",
+            value=True,
+            key="rag-disable-fallback",
+            help=(
+                "If enabled, app will keep raw model output even when citation markers are invalid. "
+                "Use only for debugging."
+            ),
+        )
 
-    top_k_chunks = st.slider("Top chunks", min_value=4, max_value=20, value=8, step=2, key="rag-top-k-chunks")
-    max_citations = st.slider("Max citations", min_value=2, max_value=10, value=6, step=1, key="rag-max-citations")
-    min_similarity = st.slider(
-        "Min chunk similarity",
-        min_value=-1.0,
-        max_value=1.0,
-        value=0.15,
-        step=0.01,
-        key="rag-min-similarity",
-    )
-    show_debug = st.toggle("Show retrieval debug details", value=False, key="rag-show-debug")
+        st.subheader("Execution Mode")
+        execution_mode = st.radio(
+            "Execution path",
+            ["Direct (local RagService)", "API (/rag/answer)"],
+            horizontal=True,
+            key="rag-execution-mode",
+        )
+        api_answer_url = st.text_input(
+            "API answer URL",
+            value="http://127.0.0.1:8000/rag/answer",
+            key="rag-api-answer-url",
+            disabled=execution_mode != "API (/rag/answer)",
+        )
+        api_timeout_sec = st.slider(
+            "API timeout (seconds)",
+            min_value=5,
+            max_value=120,
+            value=30,
+            step=5,
+            key="rag-api-timeout-sec",
+            disabled=execution_mode != "API (/rag/answer)",
+        )
 
-    st.subheader("Execution Mode")
-    execution_mode = st.radio(
-        "Execution path",
-        ["Direct (local RagService)", "API (/rag/answer)"],
-        horizontal=True,
-        key="rag-execution-mode",
-    )
-    api_answer_url = st.text_input(
-        "API answer URL",
-        value="http://127.0.0.1:8000/rag/answer",
-        key="rag-api-answer-url",
-        disabled=execution_mode != "API (/rag/answer)",
-    )
-    api_timeout_sec = st.slider(
-        "API timeout (seconds)",
-        min_value=5,
-        max_value=120,
-        value=30,
-        step=5,
-        key="rag-api-timeout-sec",
-        disabled=execution_mode != "API (/rag/answer)",
-    )
+        st.subheader("Advanced Retrieval")
+        use_hybrid = st.toggle("Enable hybrid retrieval (dense + lexical)", value=True, key="rag-hybrid-enabled")
+        dense_weight = st.slider(
+            "Dense weight",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.7,
+            step=0.05,
+            key="rag-dense-weight",
+            disabled=not use_hybrid,
+        )
+        lexical_weight = st.slider(
+            "Lexical weight",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.3,
+            step=0.05,
+            key="rag-lexical-weight",
+            disabled=not use_hybrid,
+        )
+        candidate_pool_size = st.slider(
+            "Candidate pool size",
+            min_value=8,
+            max_value=128,
+            value=48,
+            step=4,
+            key="rag-candidate-pool",
+        )
+        reranker_enabled = st.toggle("Enable reranker", value=True, key="rag-reranker-enabled")
+        reranker_model = st.text_input(
+            "Reranker model name (CrossEncoder)",
+            value="cross-encoder/ms-marco-MiniLM-L-6-v2",
+            key="rag-reranker-model",
+            disabled=not reranker_enabled,
+        )
+        reranker_top_n = st.slider(
+            "Reranker top-N",
+            min_value=4,
+            max_value=64,
+            value=24,
+            step=4,
+            key="rag-reranker-topn",
+            disabled=not reranker_enabled,
+        )
 
-    st.subheader("Advanced Retrieval")
-    use_hybrid = st.toggle("Enable hybrid retrieval (dense + lexical)", value=True, key="rag-hybrid-enabled")
-    dense_weight = st.slider(
-        "Dense weight",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.7,
-        step=0.05,
-        key="rag-dense-weight",
-        disabled=not use_hybrid,
-    )
-    lexical_weight = st.slider(
-        "Lexical weight",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.3,
-        step=0.05,
-        key="rag-lexical-weight",
-        disabled=not use_hybrid,
-    )
-    candidate_pool_size = st.slider(
-        "Candidate pool size",
-        min_value=8,
-        max_value=128,
-        value=48,
-        step=4,
-        key="rag-candidate-pool",
-    )
-    reranker_enabled = st.toggle("Enable reranker", value=False, key="rag-reranker-enabled")
-    reranker_model = st.text_input(
-        "Reranker model name (CrossEncoder)",
-        value="cross-encoder/ms-marco-MiniLM-L-6-v2",
-        key="rag-reranker-model",
-        disabled=not reranker_enabled,
-    )
-    reranker_top_n = st.slider(
-        "Reranker top-N",
-        min_value=4,
-        max_value=64,
-        value=24,
-        step=4,
-        key="rag-reranker-topn",
-        disabled=not reranker_enabled,
-    )
+        st.subheader("Generation")
+        # Default new sessions to Ollama mode for grounded generation.
+        st.session_state.setdefault("rag-generation-mode", "ollama")
+        generation_mode = st.radio(
+            "Answer mode",
+            ["deterministic", "llama.cpp", "ollama"],
+            index=2,
+            horizontal=True,
+            key="rag-generation-mode",
+        )
+        llama_model_path = st.text_input(
+            "llama.cpp model path (.gguf)",
+            value="",
+            key="rag-llama-model-path",
+            disabled=generation_mode != "llama.cpp",
+        )
+        llama_n_ctx = st.slider(
+            "llama.cpp context window",
+            min_value=512,
+            max_value=8192,
+            value=2048,
+            step=256,
+            key="rag-llama-n-ctx",
+            disabled=generation_mode != "llama.cpp",
+        )
+        llama_max_tokens = st.slider(
+            "llama.cpp max output tokens",
+            min_value=64,
+            max_value=1024,
+            value=420,
+            step=32,
+            key="rag-llama-max-tokens",
+            disabled=generation_mode != "llama.cpp",
+        )
+        llama_temp = st.slider(
+            "llama.cpp temperature",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.2,
+            step=0.05,
+            key="rag-llama-temp",
+            disabled=generation_mode != "llama.cpp",
+        )
+        llama_top_p = st.slider(
+            "llama.cpp top_p",
+            min_value=0.1,
+            max_value=1.0,
+            value=0.9,
+            step=0.05,
+            key="rag-llama-top-p",
+            disabled=generation_mode != "llama.cpp",
+        )
+        llama_threads = st.slider(
+            "llama.cpp threads",
+            min_value=1,
+            max_value=32,
+            value=6,
+            step=1,
+            key="rag-llama-threads",
+            disabled=generation_mode != "llama.cpp",
+        )
+        llama_gpu_layers = st.slider(
+            "llama.cpp GPU layers",
+            min_value=0,
+            max_value=120,
+            value=0,
+            step=1,
+            key="rag-llama-gpu-layers",
+            disabled=generation_mode != "llama.cpp",
+        )
+        ollama_base_url = st.text_input(
+            "Ollama base URL",
+            value=str(os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")),
+            key="rag-ollama-base-url",
+            disabled=generation_mode != "ollama",
+        )
+        ollama_model = st.text_input(
+            "Ollama model tag",
+            value="granite3.3:8b",
+            key="rag-ollama-model",
+            disabled=generation_mode != "ollama",
+        )
+        ollama_num_ctx = st.slider(
+            "Ollama context window",
+            min_value=512,
+            max_value=32768,
+            value=8192,
+            step=256,
+            key="rag-ollama-num-ctx",
+            disabled=generation_mode != "ollama",
+        )
+        ollama_temp = st.slider(
+            "Ollama temperature",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.2,
+            step=0.05,
+            key="rag-ollama-temp",
+            disabled=generation_mode != "ollama",
+        )
+        ollama_top_p = st.slider(
+            "Ollama top_p",
+            min_value=0.1,
+            max_value=1.0,
+            value=0.9,
+            step=0.05,
+            key="rag-ollama-top-p",
+            disabled=generation_mode != "ollama",
+        )
+        ollama_timeout_sec = st.slider(
+            "Ollama timeout (seconds)",
+            min_value=5,
+            max_value=600,
+            value=180,
+            step=5,
+            key="rag-ollama-timeout",
+            disabled=generation_mode != "ollama",
+        )
 
-    st.subheader("Generation")
-    generation_mode = st.radio(
-        "Answer mode",
-        ["deterministic", "llama.cpp", "ollama"],
-        horizontal=True,
-        key="rag-generation-mode",
-    )
-    llama_model_path = st.text_input(
-        "llama.cpp model path (.gguf)",
-        value="",
-        key="rag-llama-model-path",
-        disabled=generation_mode != "llama.cpp",
-    )
-    llama_n_ctx = st.slider(
-        "llama.cpp context window",
-        min_value=512,
-        max_value=8192,
-        value=2048,
-        step=256,
-        key="rag-llama-n-ctx",
-        disabled=generation_mode != "llama.cpp",
-    )
-    llama_max_tokens = st.slider(
-        "llama.cpp max output tokens",
-        min_value=64,
-        max_value=1024,
-        value=420,
-        step=32,
-        key="rag-llama-max-tokens",
-        disabled=generation_mode != "llama.cpp",
-    )
-    llama_temp = st.slider(
-        "llama.cpp temperature",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.2,
-        step=0.05,
-        key="rag-llama-temp",
-        disabled=generation_mode != "llama.cpp",
-    )
-    llama_top_p = st.slider(
-        "llama.cpp top_p",
-        min_value=0.1,
-        max_value=1.0,
-        value=0.9,
-        step=0.05,
-        key="rag-llama-top-p",
-        disabled=generation_mode != "llama.cpp",
-    )
-    llama_threads = st.slider(
-        "llama.cpp threads",
-        min_value=1,
-        max_value=32,
-        value=6,
-        step=1,
-        key="rag-llama-threads",
-        disabled=generation_mode != "llama.cpp",
-    )
-    llama_gpu_layers = st.slider(
-        "llama.cpp GPU layers",
-        min_value=0,
-        max_value=120,
-        value=0,
-        step=1,
-        key="rag-llama-gpu-layers",
-        disabled=generation_mode != "llama.cpp",
-    )
-    ollama_base_url = st.text_input(
-        "Ollama base URL",
-        value="http://127.0.0.1:11434",
-        key="rag-ollama-base-url",
-        disabled=generation_mode != "ollama",
-    )
-    ollama_model = st.text_input(
-        "Ollama model tag",
-        value="deepseek-r1-local:latest",
-        key="rag-ollama-model",
-        disabled=generation_mode != "ollama",
-    )
-    ollama_num_ctx = st.slider(
-        "Ollama context window",
-        min_value=512,
-        max_value=32768,
-        value=8192,
-        step=256,
-        key="rag-ollama-num-ctx",
-        disabled=generation_mode != "ollama",
-    )
-    ollama_temp = st.slider(
-        "Ollama temperature",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.2,
-        step=0.05,
-        key="rag-ollama-temp",
-        disabled=generation_mode != "ollama",
-    )
-    ollama_top_p = st.slider(
-        "Ollama top_p",
-        min_value=0.1,
-        max_value=1.0,
-        value=0.9,
-        step=0.05,
-        key="rag-ollama-top-p",
-        disabled=generation_mode != "ollama",
-    )
-    ollama_timeout_sec = st.slider(
-        "Ollama timeout (seconds)",
-        min_value=5,
-        max_value=600,
-        value=180,
-        step=5,
-        key="rag-ollama-timeout",
-        disabled=generation_mode != "ollama",
-    )
-
-    st.sidebar.header("Ask Books Filters")
-    selected_categories = st.sidebar.multiselect("Category", all_categories, default=all_categories, key="rag-category")
-    selected_modes = st.sidebar.multiselect(
-        "Theory vs Practical",
-        all_modes,
-        default=all_modes,
-        format_func=lambda m: learning_mode_labels().get(m, m),
-        key="rag-mode",
-    )
+        st.header("Ask Books Filters")
+        selected_categories = st.multiselect("Category", all_categories, default=all_categories, key="rag-category")
+        selected_modes = st.multiselect(
+            "Theory vs Practical",
+            all_modes,
+            default=all_modes,
+            format_func=lambda m: learning_mode_labels().get(m, m),
+            key="rag-mode",
+        )
 
     for turn_idx, turn in enumerate(st.session_state.get("rag-chat-history", [])):
         question = str(turn.get("question", "") or "")
@@ -1655,7 +2066,13 @@ def render_ask_books_rag_page(
         with st.chat_message("user"):
             st.write(question)
         with st.chat_message("assistant"):
-            _render_rag_chat_response(turn_idx=turn_idx, response=response, show_debug=show_debug)
+            _render_rag_chat_response(
+                turn_idx=turn_idx,
+                response=response,
+                show_debug=show_debug,
+                blur_meta_text=blur_meta_text,
+                show_fallback_notice=show_fallback_notice,
+            )
 
     pending_question = str(st.session_state.get("rag-pending-question", "") or "").strip()
     prompt_value = st.chat_input("Ask a grounded question about your books")
@@ -1664,6 +2081,17 @@ def render_ask_books_rag_page(
 
     if not query:
         return
+
+    # Show the just-submitted prompt immediately while generation runs.
+    with st.chat_message("user"):
+        st.write(query)
+
+    with st.chat_message("assistant"):
+        assistant_block = st.container()
+        with assistant_block:
+            stream_placeholder = st.empty()
+            stream_status_placeholder = st.empty()
+            stream_status_placeholder.caption("Generating answer...")
 
     effective_top_k_chunks = int(top_k_chunks)
     effective_max_citations = int(max_citations)
@@ -1675,6 +2103,8 @@ def render_ask_books_rag_page(
     effective_ollama_temp = float(ollama_temp)
     effective_ollama_top_p = float(ollama_top_p)
     effective_ollama_timeout_sec = int(ollama_timeout_sec)
+    effective_reranker_enabled = bool(reranker_enabled)
+    effective_reranker_top_n = int(reranker_top_n)
 
     if bool(st.session_state.get("rag-auto-profile-enabled", False)):
         auto_profile = _select_rag_auto_profile(query)
@@ -1689,7 +2119,9 @@ def render_ask_books_rag_page(
         effective_ollama_temp = float(profile.get("ollama_temp", effective_ollama_temp))
         effective_ollama_top_p = float(profile.get("ollama_top_p", effective_ollama_top_p))
         effective_ollama_timeout_sec = int(profile.get("ollama_timeout_sec", effective_ollama_timeout_sec))
-        st.caption(f"Auto profile selected: {auto_profile}")
+        effective_reranker_enabled = bool(profile.get("reranker_enabled", effective_reranker_enabled))
+        effective_reranker_top_n = int(profile.get("reranker_top_n", effective_reranker_top_n))
+        st.sidebar.caption(f"Auto profile selected: {auto_profile}")
 
     payload = _build_rag_answer_payload(
         query=query,
@@ -1702,9 +2134,9 @@ def render_ask_books_rag_page(
         dense_weight=float(dense_weight),
         lexical_weight=float(lexical_weight),
         candidate_pool_size=effective_candidate_pool_size,
-        reranker_enabled=bool(reranker_enabled),
+        reranker_enabled=effective_reranker_enabled,
         reranker_model=str(reranker_model),
-        reranker_top_n=int(reranker_top_n),
+        reranker_top_n=effective_reranker_top_n,
         generation_mode=effective_generation_mode,
         llama_model_path=str(llama_model_path),
         llama_n_ctx=int(llama_n_ctx),
@@ -1719,6 +2151,7 @@ def render_ask_books_rag_page(
         ollama_top_p=effective_ollama_top_p,
         ollama_num_ctx=effective_ollama_num_ctx,
         ollama_timeout_sec=effective_ollama_timeout_sec,
+        allow_fallback=not disable_fallback,
     )
 
     with st.spinner("Generating grounded answer..."):
@@ -1742,9 +2175,9 @@ def render_ask_books_rag_page(
                     lexical_weight=float(lexical_weight),
                     candidate_pool_size=effective_candidate_pool_size,
                     final_top_k=effective_top_k_chunks,
-                    reranker_enabled=bool(reranker_enabled),
-                    reranker_model_name=str(reranker_model).strip() if reranker_enabled else None,
-                    reranker_top_n=int(reranker_top_n),
+                    reranker_enabled=effective_reranker_enabled,
+                    reranker_model_name=str(reranker_model).strip() if effective_reranker_enabled else None,
+                    reranker_top_n=effective_reranker_top_n,
                 )
                 llm_config = LlamaCppConfig(
                     enabled=effective_generation_mode == "llama.cpp",
@@ -1765,15 +2198,19 @@ def render_ask_books_rag_page(
                     num_ctx=effective_ollama_num_ctx,
                     timeout_sec=effective_ollama_timeout_sec,
                 )
-                stream_placeholder = st.empty() if effective_generation_mode == "ollama" else None
-                stream_status_placeholder = st.empty() if effective_generation_mode == "ollama" else None
+                if effective_generation_mode != "ollama":
+                    stream_status_placeholder.caption("Generating grounded answer...")
 
                 def _on_token(token: str) -> None:
                     nonlocal streamed_text
                     streamed_text += str(token)
-                    if stream_placeholder is not None:
-                        stream_placeholder.markdown(streamed_text + "▌")
-                    if stream_status_placeholder is not None:
+                    if effective_generation_mode == "ollama":
+                        _render_answer_with_blur(
+                            streamed_text,
+                            placeholder=stream_placeholder,
+                            show_cursor=True,
+                            hide_meta_text=blur_meta_text,
+                        )
                         stream_status_placeholder.caption("Generating answer...")
 
                 response = rag_service.answer_question(
@@ -1785,18 +2222,27 @@ def render_ask_books_rag_page(
                     llm_config=llm_config,
                     ollama_config=ollama_config,
                     on_token=_on_token if effective_generation_mode == "ollama" else None,
+                    allow_fallback=not disable_fallback,
                 )
-                if stream_placeholder is not None:
-                    stream_placeholder.empty()
-                if stream_status_placeholder is not None:
-                    stream_status_placeholder.empty()
         except Exception as exc:
             st.error(f"Could not generate answer: {exc}")
             return
 
+    with assistant_block:
+        stream_placeholder.empty()
+        stream_status_placeholder.empty()
+        _render_rag_chat_response(
+            turn_idx=len(st.session_state.get("rag-chat-history", [])),
+            response=response,
+            show_debug=show_debug,
+            blur_meta_text=blur_meta_text,
+            show_fallback_notice=show_fallback_notice,
+        )
+
     history = st.session_state.get("rag-chat-history", [])
     history.append({"question": query, "response": response})
     st.session_state["rag-chat-history"] = history[-30:]
+    _append_rag_metrics(question=query, response=response)
     st.rerun()
 
 
@@ -2055,7 +2501,7 @@ def render_relationship_graph_page(
 
 
 def main() -> None:
-    st.set_page_config(page_title="Semantic Book Recommender", layout="wide")
+    st.set_page_config(page_title="BookMap RAG", layout="wide")
     st.markdown(
         """
 <style>
@@ -2076,11 +2522,24 @@ def main() -> None:
   line-height: 1.4em;
   margin-bottom: 0.35rem;
 }
+.rag-muted-blur {
+  filter: blur(2.6px);
+  opacity: 0.58;
+  user-select: none;
+  transition: filter 120ms ease-in-out, opacity 120ms ease-in-out;
+}
+.rag-muted-blur:hover {
+  filter: blur(0.8px);
+  opacity: 0.72;
+}
+.rag-cursor {
+  opacity: 0.8;
+}
 </style>
         """,
         unsafe_allow_html=True,
     )
-    st.title("Semantic Book Recommender Dashboard")
+    st.title("BookMap RAG")
 
     index_dir = str(DEFAULT_INDEX_DIR)
     cover_cache_dir = str(DEFAULT_COVER_CACHE_DIR)
@@ -2095,7 +2554,15 @@ def main() -> None:
     )
     view_page = st.sidebar.radio(
         "Page",
-        ["Currently Reading", "Search", "Relationship Graph", "Ask Books (RAG)", "Daily Recommendations", "Library"],
+        [
+            "Currently Reading",
+            "Search",
+            "Relationship Graph",
+            "Ask Books (RAG)",
+            "RAG Metrics",
+            "Daily Recommendations",
+            "Library",
+        ],
         index=1,
     )
     cards_per_row = st.sidebar.slider("Cards per row", min_value=1, max_value=6, value=4, step=1)
@@ -2161,6 +2628,11 @@ def main() -> None:
             all_categories=all_categories,
             all_modes=all_modes,
         )
+        index_dir, cover_cache_dir, reading_list_path = render_locked_paths_sidebar()
+        return
+
+    if view_page == "RAG Metrics":
+        render_rag_metrics_page()
         index_dir, cover_cache_dir, reading_list_path = render_locked_paths_sidebar()
         return
 

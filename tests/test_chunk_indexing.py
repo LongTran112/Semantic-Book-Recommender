@@ -95,6 +95,49 @@ class ChunkIndexingTests(unittest.TestCase):
         self.assertIn("metadata", summary["source_type_counts"])
         self.assertIn("body_preview", summary["source_type_counts"])
 
+    def test_build_semantic_chunks_is_deterministic_for_same_input(self) -> None:
+        records = [
+            BookRecord(
+                category="Databases",
+                confidence=0.88,
+                title="SQL Internals",
+                filename="sql.pdf",
+                absolute_path="/tmp/sql.pdf",
+                matched_keywords=["title:sql"],
+                book_id="b-sql",
+                metadata_text="SQL indexing, joins, and optimization plans.",
+                body_preview=" ".join(["query planner cardinality and indexing strategy"] * 80),
+                learning_mode="theory",
+            )
+        ]
+        first = build_semantic_chunks(records, chunk_size=420, chunk_overlap=80)
+        second = build_semantic_chunks(records, chunk_size=420, chunk_overlap=80)
+        self.assertEqual([chunk.chunk_id for chunk in first], [chunk.chunk_id for chunk in second])
+        self.assertEqual([(c.start_char, c.end_char) for c in first], [(c.start_char, c.end_char) for c in second])
+
+    def test_chunk_offsets_are_monotonic_per_source(self) -> None:
+        records = [
+            BookRecord(
+                category="DeepLearning",
+                confidence=0.95,
+                title="Neural Nets",
+                filename="nn.pdf",
+                absolute_path="/tmp/nn.pdf",
+                matched_keywords=["title:neural network"],
+                book_id="b-nn",
+                metadata_text="Backpropagation and optimization.",
+                body_preview=" ".join(["gradient descent batch normalization regularization"] * 120),
+                learning_mode="theory",
+            )
+        ]
+        chunks = build_semantic_chunks(records, chunk_size=500, chunk_overlap=120)
+        self.assertTrue(chunks)
+        for source_type in {"metadata", "body_preview"}:
+            subset = [c for c in chunks if c.source_type == source_type]
+            for idx in range(1, len(subset)):
+                self.assertGreaterEqual(subset[idx].start_char, subset[idx - 1].start_char)
+                self.assertGreater(subset[idx].end_char, subset[idx].start_char)
+
 
 if __name__ == "__main__":
     unittest.main()

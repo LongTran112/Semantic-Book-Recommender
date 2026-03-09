@@ -1,0 +1,161 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ebooksorter-app:latest
+    container_name: ebooksorter-api
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      RAG_INDEX_DIR: /app/output/semantic_index_chunks
+      RAG_API_KEY: ${RAG_API_KEY}
+      RAG_RATE_LIMIT_WINDOW_SEC: ${RAG_RATE_LIMIT_WINDOW_SEC:-60}
+      RAG_RATE_LIMIT_MAX_REQUESTS: ${RAG_RATE_LIMIT_MAX_REQUESTS:-30}
+      TZ: ${TZ:-UTC}
+    command:
+      - python
+      - -m
+      - uvicorn
+      - api:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --workers
+      - "2"
+    volumes:
+      - ./output:/app/output
+      - ./current-read-books:/app/current-read-books
+      - ./categories.yaml:/app/categories.yaml:ro
+    depends_on:
+      - ollama
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read()\"",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  dashboard:
+    image: ebooksorter-app:latest
+    container_name: ebooksorter-dashboard
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      RAG_API_KEY: ${RAG_API_KEY}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      TZ: ${TZ:-UTC}
+    command:
+      - python
+      - -m
+      - streamlit
+      - run
+      - dashboard.py
+      - --server.address=0.0.0.0
+      - --server.port=8501
+      - --server.headless=true
+    volumes:
+      - ./output:/app/output
+      - ./current-read-books:/app/current-read-books
+      - ./categories.yaml:/app/categories.yaml:ro
+    depends_on:
+      - api
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=5).read()\"",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ebooksorter-ollama
+    restart: unless-stopped
+    environment:
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-5m}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-1}
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-1}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "sh -c 'exec 3<>/dev/tcp/127.0.0.1/11434 && echo -e \"GET /api/tags HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q \"200\"'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ebooksorter-nginx
+    restart: unless-stopped
+    depends_on:
+      - dashboard
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+      - ./deploy/logs/nginx:/var/log/nginx
+      - ./deploy/nginx/htpasswd:/etc/nginx/htpasswd:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  ollama_data:

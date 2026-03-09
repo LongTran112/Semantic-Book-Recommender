@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import unittest
 from unittest.mock import patch
 
@@ -74,13 +75,25 @@ class _FakeRagService:
             },
         }
 
-    def _build_follow_ups(self):
+    def _build_follow_ups(self, *args, **kwargs):
+        _ = args
+        _ = kwargs
         return ["Compare these sources by theoretical depth and practical exercises."]
+
+    def _validate_generated_answer(self, text, known_citations):
+        inline = {"C1"} if "[C1]" in str(text) else set()
+        return bool(inline) and inline.issubset(set(known_citations))
 
 
 class RagApiTests(unittest.TestCase):
     def setUp(self) -> None:
+        os.environ["RAG_API_KEY"] = "test-internal-key"
+        os.environ["RAG_RATE_LIMIT_WINDOW_SEC"] = "60"
+        os.environ["RAG_RATE_LIMIT_MAX_REQUESTS"] = "100"
+        api._reset_rate_limit_state()
+        api.get_rag_service.cache_clear()
         self.client = TestClient(api.app)
+        self.headers = {"X-API-Key": "test-internal-key"}
 
     @patch("api.get_rag_service")
     def test_health_ok(self, mock_get_service) -> None:
@@ -107,11 +120,13 @@ class RagApiTests(unittest.TestCase):
                 "top_k": 4,
                 "filters": {"categories": ["DeepLearning"], "learning_modes": ["theory"], "min_similarity": 0.0},
             },
+            headers=self.headers,
         )
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertTrue(payload["chunks"])
         self.assertEqual(payload["chunks"][0]["book_id"], "b1")
+        self.assertEqual(payload["chunks"][0]["absolute_path"], "")
 
     @patch("api.get_rag_service")
     def test_answer_endpoint_returns_contract(self, mock_get_service) -> None:
@@ -125,6 +140,7 @@ class RagApiTests(unittest.TestCase):
                 "max_citations": 3,
                 "llm": {"enabled": False},
             },
+            headers=self.headers,
         )
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -137,6 +153,7 @@ class RagApiTests(unittest.TestCase):
         self.assertIn("metrics", payload)
         self.assertFalse(fake.last_answer_kwargs["llm_config"].enabled)
         self.assertFalse(fake.last_answer_kwargs["ollama_config"].enabled)
+        self.assertEqual(payload["citations"][0]["absolute_path"], "")
 
     @patch("api.get_rag_service")
     def test_answer_endpoint_accepts_ollama_config(self, mock_get_service) -> None:
@@ -156,14 +173,39 @@ class RagApiTests(unittest.TestCase):
                     "timeout_sec": 30,
                 },
             },
+            headers=self.headers,
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(fake.last_answer_kwargs["ollama_config"].enabled)
         self.assertEqual(fake.last_answer_kwargs["ollama_config"].model, "deepseek-r1-local:latest")
 
     def test_invalid_payload_returns_422(self) -> None:
-        response = self.client.post("/rag/answer", json={"query": "", "top_k": 0})
+        response = self.client.post("/rag/answer", json={"query": "", "top_k": 0}, headers=self.headers)
         self.assertEqual(response.status_code, 422)
+
+    def test_protected_endpoint_rejects_missing_api_key(self) -> None:
+        response = self.client.post("/rag/answer", json={"query": "test question"})
+        self.assertEqual(response.status_code, 401)
+
+    def test_protected_endpoint_rejects_invalid_api_key(self) -> None:
+        response = self.client.post(
+            "/rag/answer",
+            json={"query": "test question"},
+            headers={"X-API-Key": "wrong-key"},
+        )
+        self.assertEqual(response.status_code, 401)
+
+    @patch("api.get_rag_service")
+    def test_rate_limit_returns_429(self, mock_get_service) -> None:
+        mock_get_service.return_value = _FakeRagService()
+        os.environ["RAG_RATE_LIMIT_MAX_REQUESTS"] = "2"
+        api._reset_rate_limit_state()
+        first = self.client.post("/rag/retrieve", json={"query": "a"}, headers=self.headers)
+        second = self.client.post("/rag/retrieve", json={"query": "b"}, headers=self.headers)
+        third = self.client.post("/rag/retrieve", json={"query": "c"}, headers=self.headers)
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(third.status_code, 429)
 
     @patch("api.get_rag_service")
     def test_answer_stream_endpoint_returns_events(self, mock_get_service) -> None:
@@ -172,10 +214,107 @@ class RagApiTests(unittest.TestCase):
             "POST",
             "/rag/answer-stream",
             json={"query": "deep learning foundations", "ollama": {"enabled": True}},
+            headers=self.headers,
         ) as response:
             self.assertEqual(response.status_code, 200)
             text = response.read().decode("utf-8")
         self.assertIn('"type": "final"', text)
+        self.assertNotIn("/tmp/a.pdf", text)
+
+    @patch("api.RagServiceRetriever")
+    @patch("api.build_lc_answer_chain", return_value=None)
+    @patch("api.get_rag_service")
+    def test_answer_lc_falls_back_when_chain_unavailable(
+        self,
+        mock_get_service,
+        _mock_chain,
+        mock_retriever_cls,
+    ) -> None:
+        fake = _FakeRagService()
+        mock_get_service.return_value = fake
+
+        class _Doc:
+            def __init__(self):
+                self.page_content = "Deep learning uses optimization and backpropagation."
+                self.metadata = {
+                    "title": "Deep Learning Theory",
+                    "book_id": "b1",
+                    "category": "DeepLearning",
+                    "learning_mode": "theory",
+                    "source_type": "body_preview",
+                    "source_index": 0,
+                    "start_char": 0,
+                    "end_char": 120,
+                    "chunk_order": 0,
+                    "chunk_len": 120,
+                    "similarity": 0.92,
+                }
+
+        class _Retriever:
+            def invoke(self, _query):
+                return [_Doc()]
+
+        mock_retriever_cls.return_value = _Retriever()
+        response = self.client.post(
+            "/rag/answer-lc",
+            json={"query": "deep learning foundations", "top_k": 4, "max_citations": 3},
+            headers=self.headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("fallback_reason", payload)
+        self.assertIn("LangChain chain unavailable", payload["fallback_reason"])
+        self.assertEqual(payload["citations"][0]["absolute_path"], "")
+
+    @patch("api.RagServiceRetriever")
+    @patch("api.build_lc_answer_chain")
+    @patch("api.get_rag_service")
+    def test_answer_lc_falls_back_on_invalid_citations(
+        self,
+        mock_get_service,
+        mock_build_chain,
+        mock_retriever_cls,
+    ) -> None:
+        fake = _FakeRagService()
+        mock_get_service.return_value = fake
+
+        class _Doc:
+            def __init__(self):
+                self.page_content = "Deep learning uses optimization and backpropagation."
+                self.metadata = {
+                    "title": "Deep Learning Theory",
+                    "book_id": "b1",
+                    "category": "DeepLearning",
+                    "learning_mode": "theory",
+                    "source_type": "body_preview",
+                    "source_index": 0,
+                    "start_char": 0,
+                    "end_char": 120,
+                    "chunk_order": 0,
+                    "chunk_len": 120,
+                    "similarity": 0.92,
+                }
+
+        class _Retriever:
+            def invoke(self, _query):
+                return [_Doc()]
+
+        mock_retriever_cls.return_value = _Retriever()
+
+        class _FakeChain:
+            def invoke(self, _payload):
+                return "Answer: This omits citation ids.\nSourcesUsed: X9"
+
+        mock_build_chain.return_value = _FakeChain()
+        response = self.client.post(
+            "/rag/answer-lc",
+            json={"query": "deep learning foundations", "top_k": 4, "max_citations": 3},
+            headers=self.headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("LangChain output missing valid citation markers.", payload["fallback_reason"])
+        self.assertEqual(payload["citations"][0]["absolute_path"], "")
 
 
 if __name__ == "__main__":

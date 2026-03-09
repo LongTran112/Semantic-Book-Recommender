@@ -14,9 +14,9 @@ class RetrievalConfig:
     lexical_weight: float = 0.3
     candidate_pool_size: int = 48
     final_top_k: int = 8
-    reranker_enabled: bool = False
-    reranker_model_name: Optional[str] = None
-    reranker_top_n: int = 24
+    reranker_enabled: bool = True
+    reranker_model_name: Optional[str] = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    reranker_top_n: int = 32
 
 
 @dataclass
@@ -42,7 +42,7 @@ class LlamaCppConfig:
 class OllamaConfig:
     enabled: bool = False
     base_url: str = "http://127.0.0.1:11434"
-    model: str = "deepseek-r1-local:latest"
+    model: str = "granite3.3:8b"
     temperature: float = 0.2
     top_p: float = 0.9
     num_ctx: int = 8192

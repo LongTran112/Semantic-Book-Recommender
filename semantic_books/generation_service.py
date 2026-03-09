@@ -22,6 +22,7 @@ class GeneratorBackend(Protocol):
         self,
         prompt: str,
         on_token: Optional[Callable[[str], None]] = None,
+        should_cancel: Optional[Callable[[], bool]] = None,
     ) -> "GenerationResult":
         """Generate plain text from prompt."""
 
@@ -70,7 +71,9 @@ class LlamaCppGenerator:
         self,
         prompt: str,
         on_token: Optional[Callable[[str], None]] = None,
+        should_cancel: Optional[Callable[[], bool]] = None,
     ) -> GenerationResult:
+        _ = should_cancel
         if not self._ensure_model():
             return GenerationResult(text="", backend="llama.cpp", error=self._last_error)
         if self._llm is None:
@@ -127,10 +130,25 @@ class OllamaGenerator:
             r"\bbut the user wants\b",
             r"\bi think the answer should\b",
             r"\bthe answer would be\b",
+            r"\binsufficient sources:\b",
+            r"\brules:\s*1\)",
+            r"\breturn format:\b",
         ]
         marker_re = re.compile("|".join(reasoning_markers), flags=re.IGNORECASE)
         paragraphs = [part.strip() for part in re.split(r"\n\s*\n", text) if part.strip()]
-        filtered = [part for part in paragraphs if not marker_re.search(part)]
+        filtered = []
+        for part in paragraphs:
+            if not marker_re.search(part):
+                filtered.append(part)
+                continue
+            answer_match = re.search(
+                r"(?i)(answer\s*:|formal definition:|plain-language intuition:|practical use-case:)",
+                part,
+            )
+            if answer_match is not None:
+                trimmed = part[answer_match.start() :].strip()
+                if trimmed:
+                    filtered.append(trimmed)
         return "\n\n".join(filtered).strip()
 
     @staticmethod
@@ -140,10 +158,17 @@ class OllamaGenerator:
             r"(?is)^\s*thinking process:.*?(?:final output generation:|final output:)\s*",
             r"(?is)<think>.*?</think>",
             r"(?im)^\s*generating grounded answer\.\.\.\s*$",
+            r"(?im)^\s*\*\*answer:\*\*\s*",
         ]
         clean = text
         for pattern in patterns:
             clean = re.sub(pattern, "", clean).strip()
+        # Drop prompt/rules echoes that some models prepend before the answer.
+        clean = re.sub(
+            r"(?is)^\s*(?:you are a technical reference.*?)(?=answer\s*:|formal definition:|plain-language intuition:|practical use-case:|sourcesused\s*:|$)",
+            "",
+            clean,
+        ).strip()
         # If model leaked internal planning, keep only the final answer section when possible.
         if re.search(r"(?i)\bso,\s*i need to\b|\bbut the user wants\b|\blet me go through\b", clean):
             final_match = re.search(
@@ -161,6 +186,7 @@ class OllamaGenerator:
         self,
         prompt: str,
         on_token: Optional[Callable[[str], None]] = None,
+        should_cancel: Optional[Callable[[], bool]] = None,
     ) -> GenerationResult:
         payload = {
             "model": str(self.cfg.model).strip(),
@@ -191,6 +217,8 @@ class OllamaGenerator:
                 else:
                     parts = []
                     for raw_line in response:
+                        if should_cancel is not None and should_cancel():
+                            break
                         line = raw_line.decode("utf-8", errors="replace").strip()
                         if not line:
                             continue

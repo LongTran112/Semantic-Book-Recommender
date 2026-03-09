@@ -1,0 +1,2 @@
+question_id,query,expected_behavior,expected_categories,answer_excerpt,citations_excerpt,auto_pass,failure_reasons,review_correctness,review_groundedness,review_completeness,review_readability,review_notes
+"Q001","Recommend two books to learn deep learning fundamentals and explain why each is useful.","answer","DeepLearning;MachineLearning","","","", "", "", "", "", ""

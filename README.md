@@ -1,6 +1,6 @@
-# Semantic-Book-Recommender
+# BookMap RAG
 
-Non-destructive technical PDF/EPUB categorizer and index generator.
+Technical PDF/EPUB library explorer with grounded RAG Q&A.
 
 ## What it does
 
@@ -8,11 +8,13 @@ Non-destructive technical PDF/EPUB categorizer and index generator.
 - Infers one category per file from:
   - filename,
   - PDF/EPUB metadata (title/subject/keywords/author where available),
-  - extracted text from the first N pages.
+  - extracted text from configurable body sampling/chunks.
 - Generates:
   - `output/books_by_category.md`
   - `output/books_by_category.csv`
   - `output/semantic_source.jsonl` (semantic-search source records)
+  - `output/semantic_chunks.jsonl` (chunk-level RAG source records)
+- Powers a Streamlit app with semantic search, relationship graph, and Ask Books grounded answers.
 
 No files are moved, renamed, or deleted.
 
@@ -220,31 +222,35 @@ Dashboard features:
 - Book cover thumbnails (first-page preview, cached locally)
 - Book detail view with related book recommendations
 - Ask Books (RAG) page for grounded Q&A with citations from local chunks
+- RAG Metrics page with in-memory charts for the last 10 answers + CSV export
+- Daily Recommendations page
 - Relationship Graph page (Obsidian-style) with whole-library and focused graph modes
 
 Streamlit is the primary frontend for this project. FastAPI endpoints are optional and mainly for external integrations/parity checks.
 
-### Ask Books Phase 2 Controls
+### Ask Books (RAG) Current Controls
 
-The `Ask Books (RAG)` page now supports two major upgrade paths:
+The `Ask Books (RAG)` page includes:
 
-- **Path A (Retriever upgrade):** hybrid retrieval (`dense + lexical`), candidate pool tuning, and optional reranker.
-- **Path B (Generator upgrade):** local `llama.cpp` answering with strict citation checks and automatic deterministic fallback.
-
-It also supports a Streamlit-first chat workflow:
-
-- Persistent chat history using chat bubbles.
-- One-click follow-up prompts from each answer.
-- Citation cards in expandable sections, with source-open actions.
-- Retrieval presets (`Balanced`, `Precision`, `Recall`) with pin/unpin and clear-chat controls.
-- Optional execution mode toggle between direct local RAG and FastAPI `/rag/answer`.
+- Streamlit chat-style interaction with persistent session history.
+- Retrieval presets: `Definition Q&A`, `Concept Compare`, `Learning Path`.
+- Performance profiles: `Auto`, `Fast`, `Balanced`, `Quality`.
+- Execution path switch: direct local RagService or FastAPI `/rag/answer`.
+- Hybrid retrieval (`dense + lexical`) tuning + reranker controls.
+- Generation backends: `deterministic`, `llama.cpp`, `ollama`.
+- Meta-text controls:
+  - hide model thinking/meta text
+  - show/hide fallback notices
+  - disable deterministic fallback (advanced)
+- Recent performance rollup in Ask Books sidebar.
+- Separate `RAG Metrics` page for last-10 in-memory charts and CSV download.
 
 Recommended first pass:
 
-- Keep `Answer mode = deterministic`.
-- Enable hybrid retrieval.
-- Start with `dense=0.7`, `lexical=0.3`, candidate pool `48`.
-- Turn on reranker only after baseline works.
+- Keep `Performance profile = Auto` and `Answer mode = ollama`.
+- Use default Ollama model `granite3.3:8b`.
+- Enable hybrid retrieval and reranker.
+- Keep deterministic fallback enabled for production-like reliability (`Disable deterministic fallback` toggle should be OFF).
 
 For local generator mode (`llama.cpp`):
 
@@ -253,12 +259,12 @@ For local generator mode (`llama.cpp`):
 - Set model path in the Ask page and switch to `Answer mode = llama.cpp`.
 - If citations are invalid or runtime fails, dashboard falls back to deterministic grounded output.
 
-For local generator mode (`ollama` + `deepseek-r1-local:latest`):
+For local generator mode (`ollama` + `granite3.3:8b`):
 
 - Install and start Ollama locally.
-- Pull a model once: `ollama pull deepseek-r1-local:latest`.
-- Verify runtime: `ollama run deepseek-r1-local:latest "hi there"`.
-- In Ask Books, set `Answer mode = ollama`, keep base URL `http://127.0.0.1:11434`, and set model tag `deepseek-r1-local:latest`.
+- Pull a model once: `ollama pull granite3.3:8b`.
+- Verify runtime: `ollama run granite3.3:8b "hi there"`.
+- In Ask Books, keep base URL `http://127.0.0.1:11434`, `Answer mode = ollama`, and model tag `granite3.3:8b`.
 - If output quality is weak, reduce temperature and increase context window.
 
 ## Launch RAG API (FastAPI)
@@ -274,6 +280,10 @@ python3 -m pip install -r requirements.txt
 Start the API server:
 
 ```bash
+export RAG_API_KEY="change-this-internal-key"
+# Optional internal guardrail tuning
+export RAG_RATE_LIMIT_WINDOW_SEC=60
+export RAG_RATE_LIMIT_MAX_REQUESTS=30
 .venv/bin/uvicorn api:app --reload --port 8000
 ```
 
@@ -283,6 +293,13 @@ Core endpoints:
 - `POST /rag/retrieve` - returns retrieved chunks only (debug/explainability).
 - `POST /rag/answer` - canonical grounded answer contract (recommended default).
 - `POST /rag/answer-lc` - experimental LangChain route with citation-safe fallback.
+- `POST /rag/answer-stream` - SSE token stream with final response event.
+
+Internal guardrails enabled on RAG endpoints:
+
+- API key required via header: `X-API-Key: <RAG_API_KEY>`.
+- In-memory fixed-window rate limiting (`RAG_RATE_LIMIT_WINDOW_SEC`, `RAG_RATE_LIMIT_MAX_REQUESTS`).
+- API payloads redact local filesystem path values in citations/chunk payloads.
 
 When to use each answer endpoint:
 
@@ -294,6 +311,7 @@ Example request (`/rag/answer`):
 ```bash
 curl -X POST "http://127.0.0.1:8000/rag/answer" \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: ${RAG_API_KEY}" \
   -d '{
     "query": "Give me deep learning theory foundations",
     "top_k": 6,
@@ -344,11 +362,14 @@ For large libraries, keep the graph responsive with:
 6. Open a book detail and check related books are shown.
 7. Open Ask Books (RAG), ask a question, and confirm citation snippets are returned.
 8. In Ask Books, enable hybrid retrieval and verify results change with dense/lexical weights.
-9. In Ask Books, test `llama.cpp` mode and verify answers include citation markers (or fallback message appears).
-10. Open Relationship Graph and confirm node selection + actions work.
-11. Start FastAPI server and call `/health`.
-12. Call `/rag/answer` and verify citations + generation mode in JSON response.
-13. Optionally call `/rag/answer-lc` and verify fallback behavior when citations are invalid.
+9. In Ask Books, test `ollama` mode and verify answers include citations or valid fallback behavior.
+10. Open `RAG Metrics` page and verify last-10 charts/table populate after Ask Books responses.
+11. Open Relationship Graph and confirm node selection + actions work.
+12. Start FastAPI server and call `/health`.
+13. Call `/rag/answer` with `X-API-Key` and verify citations + generation mode in JSON response.
+14. Send burst requests and verify rate-limit response (`429`) appears after threshold.
+15. Verify API responses do not expose local filesystem paths in citation/chunk payloads.
+16. Optionally call `/rag/answer-lc` and verify fallback behavior when citations are invalid.
 
 ## Troubleshooting
 
@@ -356,8 +377,61 @@ For large libraries, keep the graph responsive with:
 - **Dashboard cannot load index**: rerun indexing and semantic build commands, then verify files in `output/semantic_index/`.
 - **Ask Books (RAG) cannot load**: build chunk index and verify files in `output/semantic_index_chunks/`.
 - **llama.cpp mode falls back to deterministic**: verify `llama-cpp-python` is installed, model path exists, and answer includes citation markers like `[C1]`.
-- **ollama mode fails**: confirm `ollama run deepseek-r1-local:latest "hi"` works first, then verify base URL/model tag in the Ask Books page.
+- **ollama mode fails**: confirm `ollama run granite3.3:8b "hi"` works first, then verify base URL/model tag in the Ask Books page.
+- **RAG API returns 401**: ensure `RAG_API_KEY` is set on server and send `X-API-Key` header.
+- **RAG API returns 429**: reduce request burst, increase `RAG_RATE_LIMIT_MAX_REQUESTS`, or tune `RAG_RATE_LIMIT_WINDOW_SEC` for trusted internal load.
 - **Relationship graph is dense/slow**: reduce max nodes, increase min edge similarity, or lower neighbors per node.
 - **No relevant results**: lower the similarity threshold in the dashboard sidebar.
 - **Definition quality is weak**: rebuild with `--extraction-profile deep` and add category overrides for target domains (`Arduino`, `SQL`, `DeepLearning`), then rebuild `output/semantic_index_chunks/`.
 - **Indexing is too slow**: switch to `--extraction-profile fast` for iteration, and use `deep` only for final quality rebuilds.
+
+## Production Deployment
+
+Production docs are now included:
+
+- `DEPLOYMENT.md` - single VM Docker Compose deployment, TLS, security, and upgrades.
+- `RUNBOOK.md` - operations playbooks (health checks, indexing refresh, incidents, backup/restore).
+- `docker-compose.yml` - production stack (`api`, `dashboard`, `ollama`, `nginx`).
+- `.env.example` - runtime environment template for secrets and guardrails.
+
+## RAG Evaluation Harness (50 Questions)
+
+Run a repeatable quality check for grounded RAG answers using:
+
+- golden set: `eval/golden_questions_50.jsonl`
+- evaluator: `scripts/evaluate_rag.py`
+- reviewer template: `eval/human_review_template.csv`
+
+Direct service mode (no API server required):
+
+```bash
+.venv/bin/python scripts/evaluate_rag.py \
+  --mode direct \
+  --questions eval/golden_questions_50.jsonl \
+  --output-dir output/eval
+```
+
+API mode (requires FastAPI running and `RAG_API_KEY`):
+
+```bash
+export RAG_API_KEY="change-this-internal-key"
+.venv/bin/python scripts/evaluate_rag.py \
+  --mode api \
+  --api-url "http://127.0.0.1:8000" \
+  --api-key "${RAG_API_KEY}" \
+  --questions eval/golden_questions_50.jsonl \
+  --output-dir output/eval
+```
+
+Generated artifacts:
+
+- `output/eval/latest_results.json` (per-question responses + score signals)
+- `output/eval/summary.md` (pass rates, failure buckets, latency/fallback stats)
+- `output/eval/human_review_candidates.csv` (borderline cases for manual review)
+
+Suggested acceptance targets:
+
+- grounded answers with valid citations >= 90%
+- correct/acceptable answers on human-reviewed sample >= 80%
+- low-evidence queries should prefer safe fallback over hallucination
+- stable p95 latency under your runtime budget
