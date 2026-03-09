@@ -86,7 +86,7 @@ RAG_RETRIEVAL_PRESETS: Dict[str, Dict[str, Any]] = {
 RAG_PERFORMANCE_PROFILES: Dict[str, Dict[str, Any]] = {
     "Fast": {
         "generation_mode": "ollama",
-        "ollama_model": "deepseek-r1:14b",
+        "ollama_model": "granite3.3:8b",
         "ollama_num_ctx": 4096,
         "ollama_temp": 0.15,
         "ollama_top_p": 0.85,
@@ -100,7 +100,7 @@ RAG_PERFORMANCE_PROFILES: Dict[str, Dict[str, Any]] = {
     },
     "Balanced": {
         "generation_mode": "ollama",
-        "ollama_model": "deepseek-r1:14b",
+        "ollama_model": "granite3.3:8b",
         "ollama_num_ctx": 6144,
         "ollama_temp": 0.2,
         "ollama_top_p": 0.9,
@@ -2009,7 +2009,7 @@ def render_ask_books_rag_page(
         )
         ollama_model = st.text_input(
             "Ollama model tag",
-            value="deepseek-r1:14b",
+            value="granite3.3:8b",
             key="rag-ollama-model",
             disabled=generation_mode != "ollama",
         )

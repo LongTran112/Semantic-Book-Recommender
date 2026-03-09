@@ -1,14 +1,14 @@
 # RAG Evaluation Summary
 
-- Generated at: 2026-03-08T14:59:50.891403+00:00
+- Generated at: 2026-03-09T00:15:53.418802+00:00
 - Mode: `direct`
 - Questions file: `eval/golden_questions_50.jsonl`
 - Total questions: **50**
 - Auto pass rate: **92.0%** (46/50)
 - Groundedness pass rate: **100.0%** (50/50)
 - Fallback rate: **2.0%** (1/50)
-- p50 latency: **218.2 ms**
-- p95 latency: **496.9 ms**
+- p50 latency: **136.8 ms**
+- p95 latency: **225.7 ms**
 
 ## Failure Buckets
 - `fallback_inappropriate`: 4

@@ -49,6 +49,7 @@ category_order:
   - Rust
   - Python
   - Java
+  - Linear-Algebra
   - Math-Algebra
   - Math-Calculus
   - Math-Statistics
@@ -591,6 +592,19 @@ categories:
     - jakarta
     - maven
     - gradle
+  Linear-Algebra:
+    - linear algebra
+    - matrix algebra
+    - matrix decomposition
+    - eigendecomposition
+    - singular value decomposition
+    - svd
+    - eigenvalue
+    - eigenvector
+    - vector space
+    - orthogonality
+    - dot product
+    - change of basis
   Math-Algebra:
     - linear algebra
     - abstract algebra

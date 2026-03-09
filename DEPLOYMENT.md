@@ -9,7 +9,7 @@ This guide deploys EBooksSorter with four containers:
 
 ## 1) VM Sizing and Storage
 
-Recommended baseline for `deepseek-r1:14b` on CPU-only Ollama:
+Recommended baseline for `granite3.3:8b` on CPU-only Ollama:
 
 - `12-16 vCPU`
 - `48-64 GB RAM`

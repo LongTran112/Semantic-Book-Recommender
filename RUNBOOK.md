@@ -61,13 +61,13 @@ Verification:
 Pull default model:
 
 ```bash
-docker compose exec ollama ollama pull deepseek-r1:14b
+docker compose exec ollama ollama pull granite3.3:8b
 ```
 
 Test local model:
 
 ```bash
-docker compose exec ollama ollama run deepseek-r1:14b "hello"
+docker compose exec ollama ollama run granite3.3:8b "hello"
 ```
 
 If model responses are slow:

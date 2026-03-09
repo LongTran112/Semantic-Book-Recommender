@@ -42,7 +42,7 @@ class LlamaCppConfig:
 class OllamaConfig:
     enabled: bool = False
     base_url: str = "http://127.0.0.1:11434"
-    model: str = "deepseek-r1:14b"
+    model: str = "granite3.3:8b"
     temperature: float = 0.2
     top_p: float = 0.9
     num_ctx: int = 8192
