@@ -2,6 +2,11 @@
 
 Technical PDF/EPUB library explorer with grounded RAG Q&A.
 
+<video width="100%" autoplay loop muted playsinline>
+  <source src="./assets/demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ## What it does
 
 - Scans a source folder recursively for `.pdf` and `.epub` files.
