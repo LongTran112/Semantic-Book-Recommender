@@ -2,7 +2,7 @@
 
 Technical PDF/EPUB library explorer with grounded RAG Q&A.
 
-[▶ Demo Video](./assets/demo.mp4)
+[![Demo Preview](./assets/demo-preview.gif)](./assets/demo.mp4)
 
 ## What it does
 
