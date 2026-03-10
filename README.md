@@ -2,6 +2,10 @@
 
 Technical PDF/EPUB library explorer with grounded RAG Q&A.
 
+
+Uploading Screen Recording 2026-03-10 at 15.06.30.mov…
+
+
 ## What it does
 
 - Scans a source folder recursively for `.pdf` and `.epub` files.
