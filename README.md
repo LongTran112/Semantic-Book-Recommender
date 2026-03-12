@@ -303,6 +303,12 @@ Core endpoints:
 - `POST /rag/answer-lc` - experimental LangChain route with citation-safe fallback.
 - `POST /rag/answer-stream` - SSE token stream with final response event.
 
+OpenAPI docs:
+
+- `GET /openapi/schema/` - machine-readable OpenAPI schema (JSON).
+- `GET /openapi/swagger/` - Swagger UI interactive docs.
+- `GET /openapi/redoc/` - ReDoc API reference.
+
 Internal guardrails enabled on RAG endpoints:
 
 - API key required via header: `X-API-Key: <RAG_API_KEY>`.

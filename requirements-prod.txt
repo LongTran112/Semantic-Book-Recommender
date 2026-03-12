@@ -9,6 +9,7 @@ beautifulsoup4
 plotly
 django
 djangorestframework
+drf-spectacular
 uvicorn[standard]
 pydantic
 langchain

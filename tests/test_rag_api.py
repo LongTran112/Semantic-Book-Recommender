@@ -219,6 +219,16 @@ class RagApiTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 401)
 
+    def test_openapi_schema_endpoint_available(self) -> None:
+        response = self.client.get("/openapi/schema/", HTTP_ACCEPT="application/json")
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(response.content.decode("utf-8"))
+        self.assertEqual(payload.get("openapi"), "3.0.3")
+
+    def test_openapi_swagger_ui_endpoint_available(self) -> None:
+        response = self.client.get("/openapi/swagger/")
+        self.assertEqual(response.status_code, 200)
+
     @patch("rag_api.views.get_rag_service")
     def test_rate_limit_returns_429(self, mock_get_service) -> None:
         mock_get_service.return_value = _FakeRagService()

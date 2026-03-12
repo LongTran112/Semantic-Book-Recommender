@@ -12,6 +12,7 @@ from rest_framework import status
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 
 from semantic_books.langchain_adapter import (
     RagServiceRetriever,
@@ -43,6 +44,12 @@ class HealthView(APIView):
     permission_classes = []
     throttle_classes = []
 
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(description="Service health and indexed chunk count"),
+            503: OpenApiResponse(description="RAG service unavailable"),
+        }
+    )
     def get(self, request):  # type: ignore[no-untyped-def]
         _ = request
         try:
@@ -65,6 +72,10 @@ class RagRetrieveView(APIView):
     permission_classes = []
     throttle_classes = []
 
+    @extend_schema(
+        request=RagRequestSerializer,
+        responses={200: OpenApiResponse(description="Retrieved chunk list")},
+    )
     def post(self, request):  # type: ignore[no-untyped-def]
         _ = require_guardrails(request)
         serializer = RagRequestSerializer(data=request.data)
@@ -95,6 +106,10 @@ class RagAnswerView(APIView):
     permission_classes = []
     throttle_classes = []
 
+    @extend_schema(
+        request=RagRequestSerializer,
+        responses={200: OpenApiResponse(description="Grounded answer with citations")},
+    )
     def post(self, request):  # type: ignore[no-untyped-def]
         _ = require_guardrails(request)
         serializer = RagRequestSerializer(data=request.data)
@@ -133,6 +148,10 @@ class RagAnswerLangChainView(APIView):
     permission_classes = []
     throttle_classes = []
 
+    @extend_schema(
+        request=RagRequestSerializer,
+        responses={200: OpenApiResponse(description="LangChain answer route with fallback")},
+    )
     def post(self, request):  # type: ignore[no-untyped-def]
         _ = require_guardrails(request)
         serializer = RagRequestSerializer(data=request.data)
@@ -230,6 +249,10 @@ class RagAnswerStreamView(APIView):
     permission_classes = []
     throttle_classes = []
 
+    @extend_schema(
+        request=RagRequestSerializer,
+        responses={200: OpenApiResponse(description="SSE stream with token and final events")},
+    )
     def post(self, request):  # type: ignore[no-untyped-def]
         _ = require_guardrails(request)
         serializer = RagRequestSerializer(data=request.data)
