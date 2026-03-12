@@ -1261,12 +1261,21 @@ def _build_rag_answer_payload(
     }
 
 
-def _call_rag_api_answer(api_url: str, payload: Dict[str, Any], timeout_sec: int = 30) -> Dict[str, Any]:
+def _call_rag_api_answer(
+    api_url: str,
+    payload: Dict[str, Any],
+    timeout_sec: int = 30,
+    api_key: str = "",
+) -> Dict[str, Any]:
     body = json.dumps(payload).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    key = str(api_key or "").strip()
+    if key:
+        headers["X-API-Key"] = key
     request = urllib.request.Request(
         api_url,
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:
@@ -1885,6 +1894,14 @@ def render_ask_books_rag_page(
             key="rag-api-timeout-sec",
             disabled=execution_mode != "API (/rag/answer)",
         )
+        default_api_key = str(os.getenv("RAG_API_KEY", "") or "")
+        api_key = st.text_input(
+            "API key (X-API-Key)",
+            value=default_api_key,
+            key="rag-api-key",
+            type="password",
+            disabled=execution_mode != "API (/rag/answer)",
+        )
 
         st.subheader("Advanced Retrieval")
         use_hybrid = st.toggle("Enable hybrid retrieval (dense + lexical)", value=True, key="rag-hybrid-enabled")
@@ -2162,6 +2179,7 @@ def render_ask_books_rag_page(
                     api_url=str(api_answer_url).strip(),
                     payload=payload,
                     timeout_sec=int(api_timeout_sec),
+                    api_key=str(api_key),
                 )
             else:
                 filters = RagFilters(

@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import json
 import os
 import unittest
 from unittest.mock import patch
 
-from fastapi.testclient import TestClient
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
+import django
 
-import api
+django.setup()
+
+from django.test import Client
+
+from rag_api import guardrails
 
 
 class _FakeRagService:
@@ -90,12 +96,11 @@ class RagApiTests(unittest.TestCase):
         os.environ["RAG_API_KEY"] = "test-internal-key"
         os.environ["RAG_RATE_LIMIT_WINDOW_SEC"] = "60"
         os.environ["RAG_RATE_LIMIT_MAX_REQUESTS"] = "100"
-        api._reset_rate_limit_state()
-        api.get_rag_service.cache_clear()
-        self.client = TestClient(api.app)
-        self.headers = {"X-API-Key": "test-internal-key"}
+        guardrails.reset_rate_limit_state()
+        self.client = Client()
+        self.headers = {"HTTP_X_API_KEY": "test-internal-key"}
 
-    @patch("api.get_rag_service")
+    @patch("rag_api.views.get_rag_service")
     def test_health_ok(self, mock_get_service) -> None:
         mock_get_service.return_value = _FakeRagService()
         response = self.client.get("/health")
@@ -104,23 +109,26 @@ class RagApiTests(unittest.TestCase):
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["chunks_indexed"], 2)
 
-    @patch("api.get_rag_service", side_effect=RuntimeError("missing index"))
+    @patch("rag_api.views.get_rag_service", side_effect=RuntimeError("missing index"))
     def test_health_failure_returns_503(self, _mock_get_service) -> None:
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 503)
         self.assertIn("RAG service unavailable", response.json()["detail"])
 
-    @patch("api.get_rag_service")
+    @patch("rag_api.views.get_rag_service")
     def test_retrieve_endpoint_returns_chunks(self, mock_get_service) -> None:
         mock_get_service.return_value = _FakeRagService()
         response = self.client.post(
             "/rag/retrieve",
-            json={
-                "query": "deep learning foundations",
-                "top_k": 4,
-                "filters": {"categories": ["DeepLearning"], "learning_modes": ["theory"], "min_similarity": 0.0},
-            },
-            headers=self.headers,
+            data=json.dumps(
+                {
+                    "query": "deep learning foundations",
+                    "top_k": 4,
+                    "filters": {"categories": ["DeepLearning"], "learning_modes": ["theory"], "min_similarity": 0.0},
+                }
+            ),
+            content_type="application/json",
+            **self.headers,
         )
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -128,19 +136,22 @@ class RagApiTests(unittest.TestCase):
         self.assertEqual(payload["chunks"][0]["book_id"], "b1")
         self.assertEqual(payload["chunks"][0]["absolute_path"], "")
 
-    @patch("api.get_rag_service")
+    @patch("rag_api.views.get_rag_service")
     def test_answer_endpoint_returns_contract(self, mock_get_service) -> None:
         fake = _FakeRagService()
         mock_get_service.return_value = fake
         response = self.client.post(
             "/rag/answer",
-            json={
-                "query": "deep learning foundations",
-                "top_k": 4,
-                "max_citations": 3,
-                "llm": {"enabled": False},
-            },
-            headers=self.headers,
+            data=json.dumps(
+                {
+                    "query": "deep learning foundations",
+                    "top_k": 4,
+                    "max_citations": 3,
+                    "llm": {"enabled": False},
+                }
+            ),
+            content_type="application/json",
+            **self.headers,
         )
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -155,75 +166,103 @@ class RagApiTests(unittest.TestCase):
         self.assertFalse(fake.last_answer_kwargs["ollama_config"].enabled)
         self.assertEqual(payload["citations"][0]["absolute_path"], "")
 
-    @patch("api.get_rag_service")
+    @patch("rag_api.views.get_rag_service")
     def test_answer_endpoint_accepts_ollama_config(self, mock_get_service) -> None:
         fake = _FakeRagService()
         mock_get_service.return_value = fake
         response = self.client.post(
             "/rag/answer",
-            json={
-                "query": "deep learning foundations",
-                "ollama": {
-                    "enabled": True,
-                    "base_url": "http://127.0.0.1:11434",
-                    "model": "deepseek-r1-local:latest",
-                    "temperature": 0.1,
-                    "top_p": 0.8,
-                    "num_ctx": 4096,
-                    "timeout_sec": 30,
-                },
-            },
-            headers=self.headers,
+            data=json.dumps(
+                {
+                    "query": "deep learning foundations",
+                    "ollama": {
+                        "enabled": True,
+                        "base_url": "http://127.0.0.1:11434",
+                        "model": "deepseek-r1-local:latest",
+                        "temperature": 0.1,
+                        "top_p": 0.8,
+                        "num_ctx": 4096,
+                        "timeout_sec": 30,
+                    },
+                }
+            ),
+            content_type="application/json",
+            **self.headers,
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(fake.last_answer_kwargs["ollama_config"].enabled)
         self.assertEqual(fake.last_answer_kwargs["ollama_config"].model, "deepseek-r1-local:latest")
 
     def test_invalid_payload_returns_422(self) -> None:
-        response = self.client.post("/rag/answer", json={"query": "", "top_k": 0}, headers=self.headers)
+        response = self.client.post(
+            "/rag/answer",
+            data=json.dumps({"query": "", "top_k": 0}),
+            content_type="application/json",
+            **self.headers,
+        )
         self.assertEqual(response.status_code, 422)
 
     def test_protected_endpoint_rejects_missing_api_key(self) -> None:
-        response = self.client.post("/rag/answer", json={"query": "test question"})
+        response = self.client.post(
+            "/rag/answer",
+            data=json.dumps({"query": "test question"}),
+            content_type="application/json",
+        )
         self.assertEqual(response.status_code, 401)
 
     def test_protected_endpoint_rejects_invalid_api_key(self) -> None:
         response = self.client.post(
             "/rag/answer",
-            json={"query": "test question"},
-            headers={"X-API-Key": "wrong-key"},
+            data=json.dumps({"query": "test question"}),
+            content_type="application/json",
+            HTTP_X_API_KEY="wrong-key",
         )
         self.assertEqual(response.status_code, 401)
 
-    @patch("api.get_rag_service")
+    @patch("rag_api.views.get_rag_service")
     def test_rate_limit_returns_429(self, mock_get_service) -> None:
         mock_get_service.return_value = _FakeRagService()
         os.environ["RAG_RATE_LIMIT_MAX_REQUESTS"] = "2"
-        api._reset_rate_limit_state()
-        first = self.client.post("/rag/retrieve", json={"query": "a"}, headers=self.headers)
-        second = self.client.post("/rag/retrieve", json={"query": "b"}, headers=self.headers)
-        third = self.client.post("/rag/retrieve", json={"query": "c"}, headers=self.headers)
+        guardrails.reset_rate_limit_state()
+        first = self.client.post(
+            "/rag/retrieve",
+            data=json.dumps({"query": "a"}),
+            content_type="application/json",
+            **self.headers,
+        )
+        second = self.client.post(
+            "/rag/retrieve",
+            data=json.dumps({"query": "b"}),
+            content_type="application/json",
+            **self.headers,
+        )
+        third = self.client.post(
+            "/rag/retrieve",
+            data=json.dumps({"query": "c"}),
+            content_type="application/json",
+            **self.headers,
+        )
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 200)
         self.assertEqual(third.status_code, 429)
 
-    @patch("api.get_rag_service")
+    @patch("rag_api.views.get_rag_service")
     def test_answer_stream_endpoint_returns_events(self, mock_get_service) -> None:
         mock_get_service.return_value = _FakeRagService()
-        with self.client.stream(
-            "POST",
+        response = self.client.post(
             "/rag/answer-stream",
-            json={"query": "deep learning foundations", "ollama": {"enabled": True}},
-            headers=self.headers,
-        ) as response:
-            self.assertEqual(response.status_code, 200)
-            text = response.read().decode("utf-8")
+            data=json.dumps({"query": "deep learning foundations", "ollama": {"enabled": True}}),
+            content_type="application/json",
+            **self.headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        text = b"".join(response.streaming_content).decode("utf-8")
         self.assertIn('"type": "final"', text)
         self.assertNotIn("/tmp/a.pdf", text)
 
-    @patch("api.RagServiceRetriever")
-    @patch("api.build_lc_answer_chain", return_value=None)
-    @patch("api.get_rag_service")
+    @patch("rag_api.views.RagServiceRetriever")
+    @patch("rag_api.views.build_lc_answer_chain", return_value=None)
+    @patch("rag_api.views.get_rag_service")
     def test_answer_lc_falls_back_when_chain_unavailable(
         self,
         mock_get_service,
@@ -257,8 +296,9 @@ class RagApiTests(unittest.TestCase):
         mock_retriever_cls.return_value = _Retriever()
         response = self.client.post(
             "/rag/answer-lc",
-            json={"query": "deep learning foundations", "top_k": 4, "max_citations": 3},
-            headers=self.headers,
+            data=json.dumps({"query": "deep learning foundations", "top_k": 4, "max_citations": 3}),
+            content_type="application/json",
+            **self.headers,
         )
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -266,9 +306,9 @@ class RagApiTests(unittest.TestCase):
         self.assertIn("LangChain chain unavailable", payload["fallback_reason"])
         self.assertEqual(payload["citations"][0]["absolute_path"], "")
 
-    @patch("api.RagServiceRetriever")
-    @patch("api.build_lc_answer_chain")
-    @patch("api.get_rag_service")
+    @patch("rag_api.views.RagServiceRetriever")
+    @patch("rag_api.views.build_lc_answer_chain")
+    @patch("rag_api.views.get_rag_service")
     def test_answer_lc_falls_back_on_invalid_citations(
         self,
         mock_get_service,
@@ -308,8 +348,9 @@ class RagApiTests(unittest.TestCase):
         mock_build_chain.return_value = _FakeChain()
         response = self.client.post(
             "/rag/answer-lc",
-            json={"query": "deep learning foundations", "top_k": 4, "max_citations": 3},
-            headers=self.headers,
+            data=json.dumps({"query": "deep learning foundations", "top_k": 4, "max_citations": 3}),
+            content_type="application/json",
+            **self.headers,
         )
         self.assertEqual(response.status_code, 200)
         payload = response.json()

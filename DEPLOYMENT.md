@@ -2,7 +2,7 @@
 
 This guide deploys EBooksSorter with four containers:
 
-- `api` (FastAPI)
+- `api` (Django + DRF)
 - `dashboard` (Streamlit)
 - `ollama` (local model runtime)
 - `nginx` (TLS reverse proxy)
