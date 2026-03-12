@@ -74,4 +74,14 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "EBooksSorter RAG API",
     "DESCRIPTION": "OpenAPI schema for the Django/DRF RAG backend.",
     "VERSION": "1.0.0",
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-API-Key",
+                "description": "Internal API key required for protected RAG endpoints.",
+            }
+        }
+    },
 }

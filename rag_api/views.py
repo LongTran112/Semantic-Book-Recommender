@@ -12,7 +12,7 @@ from rest_framework import status
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 
 from semantic_books.langchain_adapter import (
     RagServiceRetriever,
@@ -74,6 +74,7 @@ class RagRetrieveView(APIView):
 
     @extend_schema(
         request=RagRequestSerializer,
+        auth=["ApiKeyAuth"],
         responses={200: OpenApiResponse(description="Retrieved chunk list")},
     )
     def post(self, request):  # type: ignore[no-untyped-def]
@@ -108,6 +109,30 @@ class RagAnswerView(APIView):
 
     @extend_schema(
         request=RagRequestSerializer,
+        auth=["ApiKeyAuth"],
+        examples=[
+            OpenApiExample(
+                "RAG answer example",
+                value={
+                    "query": "Give me deep learning theory foundations",
+                    "top_k": 6,
+                    "max_citations": 4,
+                    "filters": {"categories": ["DeepLearning"], "learning_modes": ["theory"], "min_similarity": 0.0},
+                    "retrieval": {
+                        "hybrid_enabled": True,
+                        "dense_weight": 0.7,
+                        "lexical_weight": 0.3,
+                        "candidate_pool_size": 48,
+                        "final_top_k": 6,
+                        "reranker_enabled": False,
+                        "reranker_model_name": None,
+                        "reranker_top_n": 24,
+                    },
+                    "llm": {"enabled": False},
+                },
+                request_only=True,
+            )
+        ],
         responses={200: OpenApiResponse(description="Grounded answer with citations")},
     )
     def post(self, request):  # type: ignore[no-untyped-def]
@@ -150,6 +175,7 @@ class RagAnswerLangChainView(APIView):
 
     @extend_schema(
         request=RagRequestSerializer,
+        auth=["ApiKeyAuth"],
         responses={200: OpenApiResponse(description="LangChain answer route with fallback")},
     )
     def post(self, request):  # type: ignore[no-untyped-def]
@@ -251,6 +277,7 @@ class RagAnswerStreamView(APIView):
 
     @extend_schema(
         request=RagRequestSerializer,
+        auth=["ApiKeyAuth"],
         responses={200: OpenApiResponse(description="SSE stream with token and final events")},
     )
     def post(self, request):  # type: ignore[no-untyped-def]

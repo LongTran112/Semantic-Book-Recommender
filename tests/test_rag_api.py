@@ -224,6 +224,11 @@ class RagApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = json.loads(response.content.decode("utf-8"))
         self.assertEqual(payload.get("openapi"), "3.0.3")
+        security_schemes = payload.get("components", {}).get("securitySchemes", {})
+        self.assertIn("ApiKeyAuth", security_schemes)
+        self.assertEqual(security_schemes["ApiKeyAuth"].get("name"), "X-API-Key")
+        rag_answer_security = payload.get("paths", {}).get("/rag/answer", {}).get("post", {}).get("security", [])
+        self.assertIn("ApiKeyAuth", rag_answer_security)
 
     def test_openapi_swagger_ui_endpoint_available(self) -> None:
         response = self.client.get("/openapi/swagger/")

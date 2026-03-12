@@ -308,6 +308,7 @@ OpenAPI docs:
 - `GET /openapi/schema/` - machine-readable OpenAPI schema (JSON).
 - `GET /openapi/swagger/` - Swagger UI interactive docs.
 - `GET /openapi/redoc/` - ReDoc API reference.
+- In Swagger UI, click `Authorize` and set `X-API-Key` to call protected `/rag/*` endpoints.
 
 Internal guardrails enabled on RAG endpoints:
 
