@@ -228,7 +228,7 @@ class RagApiTests(unittest.TestCase):
         self.assertIn("ApiKeyAuth", security_schemes)
         self.assertEqual(security_schemes["ApiKeyAuth"].get("name"), "X-API-Key")
         rag_answer_security = payload.get("paths", {}).get("/rag/answer", {}).get("post", {}).get("security", [])
-        self.assertIn("ApiKeyAuth", rag_answer_security)
+        self.assertIn({"ApiKeyAuth": []}, rag_answer_security)
 
     def test_openapi_swagger_ui_endpoint_available(self) -> None:
         response = self.client.get("/openapi/swagger/")

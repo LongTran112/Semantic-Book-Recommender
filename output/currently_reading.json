@@ -1,0 +1,42 @@
+{
+  "1a1cb726b0bc": {
+    "book_id": "1a1cb726b0bc",
+    "title": "Programming PyTorch for Deep Learning",
+    "category": "DeepLearning",
+    "learning_mode": "unknown",
+    "absolute_path": "/Users/longtran/Documents/E-Books/Programming PyTorch for Deep Learning Creating and Deploying Deep Learning Applications (Ian Pointer) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "added_at": "2026-03-13T14:33:27.967862+00:00",
+    "progress_pct": 0,
+    "reading_copy_path": "current-read-books/1a1cb726b0bc__Programming PyTorch for Deep Learning Creating and Deploying Deep Learning Applications (Ian Pointer) (z-library.sk, 1lib.sk, z-lib.sk).pdf"
+  },
+  "c691c8359d9c": {
+    "book_id": "c691c8359d9c",
+    "title": "Computer Vision Projects with PyTorch",
+    "category": "ComputerVision",
+    "learning_mode": "practical",
+    "absolute_path": "/Users/longtran/Documents/E-Books/Computer Vision Projects with PyTorch _ Design and Develop -- Akshay Kulkarni, Adarsha Shivananda, Nitin Ranjan Sharma -- 1st ed_, 2022 -- Apress L_ -- 9781484282724 -- 840c4334a2852cfddbe10d5bf362e111 -- Anna’s Archive.pdf",
+    "added_at": "2026-03-13T14:33:33.907721+00:00",
+    "progress_pct": 0,
+    "reading_copy_path": "current-read-books/c691c8359d9c__Computer Vision Projects with PyTorch _ Design and Develop -- Akshay Kulkarni, Adarsha Shivananda, Nitin Ranjan Sharma -- 1st ed_, 2022 -- Apress L_ -- 9781484282724 -- 840c4334a2852cfddbe10d5bf362e111 -- Anna’s Archive.pdf"
+  },
+  "0ea39ccc7097": {
+    "book_id": "0ea39ccc7097",
+    "title": "Deep Learning with PyTorch Step-by-Step: A Beginner’s Guide",
+    "category": "DeepLearning",
+    "learning_mode": "practical",
+    "absolute_path": "/Users/longtran/Documents/E-Books/Deep Learning with PyTorch Step-by-Step A Beginner’s Guide (Daniel Voigt Godoy) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "added_at": "2026-03-13T14:33:38.188941+00:00",
+    "progress_pct": 0,
+    "reading_copy_path": "current-read-books/0ea39ccc7097__Deep Learning with PyTorch Step-by-Step A Beginner’s Guide (Daniel Voigt Godoy) (z-library.sk, 1lib.sk, z-lib.sk).pdf"
+  },
+  "855012368d01": {
+    "book_id": "855012368d01",
+    "title": "Get Sht Done With Pytorch Solve Real-World Machine Learning Problems (Venelin Valkov) (z-library.sk, 1lib.sk, z-lib.sk)",
+    "category": "MachineLearning",
+    "learning_mode": "practical",
+    "absolute_path": "/Users/longtran/Documents/E-Books/Get Sht Done With Pytorch Solve Real-World Machine Learning Problems (Venelin Valkov) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "added_at": "2026-03-13T14:33:40.518317+00:00",
+    "progress_pct": 0,
+    "reading_copy_path": "current-read-books/855012368d01__Get Sht Done With Pytorch Solve Real-World Machine Learning Problems (Venelin Valkov) (z-library.sk, 1lib.sk, z-lib.sk).pdf"
+  }
+}

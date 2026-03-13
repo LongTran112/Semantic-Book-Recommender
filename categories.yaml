@@ -41,6 +41,7 @@ category_order:
   - PCB-Design
   - Linux-SystemProgramming
   - Build-C-CPP
+  - Coding-Interview
   - System-Design
   - ComputerArchitecture
   - OperatingSystems
@@ -505,8 +506,32 @@ categories:
     - c++20
     - c++ core guidelines
     - move semantics
+  Coding-Interview:
+    - coding interview
+    - interview preparation
+    - interview prep
+    - coding interview question
+    - algorithm interview
+    - data structure interview
+    - data structures and algorithms
+    - dsa
+    - algorithmic problem solving
+    - leetcode
+    - interview coding challenge
+    - dynamic programming
+    - sliding window
+    - two pointers
+    - binary search
+    - graph traversal
+    - backtracking
+    - greedy algorithm
+    - time complexity
+    - big o
   System-Design:
     - system design
+    - system design interview
+    - hld interview
+    - lld interview
     - scalable systems
     - high level design
     - low level design
