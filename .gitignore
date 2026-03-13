@@ -8,3 +8,4 @@ deploy/backups/
 deploy/nginx/htpasswd
 output/.~lock.*
 output/covers/
+current-read-books/
