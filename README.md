@@ -65,11 +65,23 @@ pip install -r requirements.txt
 .venv/bin/python build_semantic_index.py \
   --semantic-source "./output/semantic_chunks.jsonl" \
   --output-dir "./output/semantic_index_chunks" \
-  --model "sentence-transformers/all-MiniLM-L6-v2" \
-  --enable-multimodal \
-  --multimodal-model "sentence-transformers/clip-ViT-B-32" \
-  --batch-size-image 4 \
-  --max-image-side 768
+  --model "sentence-transformers/all-MiniLM-L6-v2"
+```
+
+#### Compare two text embedding models (optional)
+
+```bash
+# MiniLM (faster, lighter)
+.venv/bin/python build_semantic_index.py \
+  --semantic-source "./output/semantic_chunks.jsonl" \
+  --output-dir "./output/semantic_index_chunks_minilm" \
+  --model "sentence-transformers/all-MiniLM-L6-v2"
+
+# BGE base (usually better retrieval quality)
+.venv/bin/python build_semantic_index.py \
+  --semantic-source "./output/semantic_chunks.jsonl" \
+  --output-dir "./output/semantic_index_chunks_bge_base" \
+  --model "BAAI/bge-base-en-v1.5"
 ```
 
 ### 5) Start API (optional but recommended for API mode)
@@ -96,6 +108,7 @@ ollama run granite3.3:8b "hello"
 ```
 
 Use in Ask Books:
+
 - generation mode: `ollama`
 - base URL: `http://127.0.0.1:11434`
 - model: `granite3.3:8b`
@@ -109,6 +122,7 @@ curl -s http://127.0.0.1:7860/sdapi/v1/sd-models
 ```
 
 In Ask Books image output settings:
+
 - provider: `sdapi`
 - endpoint: `http://127.0.0.1:7860/sdapi/v1/txt2img`
 
