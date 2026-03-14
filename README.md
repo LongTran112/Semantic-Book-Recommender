@@ -1,5 +1,7 @@
 # EBooksSorter
 
+[![Demo Preview](./assets/demo-preview.gif)](./assets/demo.mp4)
+
 Local-first PDF/EPUB library explorer with grounded RAG Q&A and semantic chunk indexing.
 
 ## What This Project Does
