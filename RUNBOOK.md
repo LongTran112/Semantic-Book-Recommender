@@ -56,6 +56,11 @@ Verification:
 - `output/semantic_index_chunks/vectors.npy` exists
 - API `/health` shows non-zero `chunks_indexed`
 
+Notes:
+
+- Index build is text-chunk based (`semantic_source.jsonl` and `semantic_chunks.jsonl`).
+- Keep `output/semantic_index_chunks` refreshed whenever the corpus changes.
+
 ## Model Operations (Ollama)
 
 Pull default model:

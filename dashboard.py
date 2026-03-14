@@ -46,11 +46,13 @@ from semantic_books.search_service import SearchFilters, SemanticSearchService
 
 DEFAULT_INDEX_DIR = Path("./output/semantic_index")
 DEFAULT_CHUNK_INDEX_DIR = Path("./output/semantic_index_chunks")
+DEFAULT_CHUNK_INDEX_DIR_GTE_LARGE = Path("./output/semantic_index_chunks_gte_large")
 DEFAULT_COVER_CACHE_DIR = Path("./output/covers")
 DEFAULT_READING_LIST_PATH = Path("./output/currently_reading.json")
 DEFAULT_DAILY_RECOMMENDATIONS_PATH = Path("./output/daily_recommendations.json")
 DEFAULT_CURRENT_READ_BOOKS_DIR = Path("./current-read-books")
 NOTEBOOKLM_URL = "https://notebooklm.google.com"
+DEFAULT_RERANKER_MODEL = "BAAI/bge-reranker-large"
 RAG_RETRIEVAL_PRESETS: Dict[str, Dict[str, Any]] = {
     "Definition Q&A": {
         "top_k_chunks": 4,
@@ -130,6 +132,29 @@ RAG_PERFORMANCE_PROFILES: Dict[str, Dict[str, Any]] = {
 RAG_LATENCY_TARGET_MS = 25000.0
 RAG_AUTO_FAST_MAX_QUERY_CHARS = 120
 RAG_AUTO_BALANCED_MAX_QUERY_CHARS = 260
+RERANKER_MODEL_OPTIONS: List[str] = [
+    "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "cross-encoder/ms-marco-MiniLM-L-12-v2",
+    "BAAI/bge-reranker-base",
+    "BAAI/bge-reranker-large",
+    "Custom",
+]
+
+
+def _rag_chunk_index_directory_options() -> List[str]:
+    preferred_default = DEFAULT_CHUNK_INDEX_DIR_GTE_LARGE if DEFAULT_CHUNK_INDEX_DIR_GTE_LARGE.exists() else DEFAULT_CHUNK_INDEX_DIR
+    options: List[str] = [str(preferred_default)]
+    if str(DEFAULT_CHUNK_INDEX_DIR) not in options:
+        options.append(str(DEFAULT_CHUNK_INDEX_DIR))
+    output_dir = Path("./output")
+    if output_dir.exists() and output_dir.is_dir():
+        for child in sorted(output_dir.iterdir(), key=lambda p: p.name):
+            if child.is_dir() and child.name.startswith("semantic_index_chunks"):
+                candidate = str(child)
+                if candidate not in options:
+                    options.append(candidate)
+    options.append("Custom")
+    return options
 
 
 @st.cache_resource
@@ -1864,7 +1889,7 @@ def render_ask_books_rag_page(
         )
         disable_fallback = st.toggle(
             "Disable deterministic fallback (advanced)",
-            value=True,
+            value=False,
             key="rag-disable-fallback",
             help=(
                 "If enabled, app will keep raw model output even when citation markers are invalid. "
@@ -1932,12 +1957,30 @@ def render_ask_books_rag_page(
             key="rag-candidate-pool",
         )
         reranker_enabled = st.toggle("Enable reranker", value=True, key="rag-reranker-enabled")
-        reranker_model = st.text_input(
-            "Reranker model name (CrossEncoder)",
-            value="cross-encoder/ms-marco-MiniLM-L-6-v2",
-            key="rag-reranker-model",
+        current_reranker_model = str(
+            st.session_state.get("rag-reranker-model", DEFAULT_RERANKER_MODEL) or ""
+        ).strip()
+        known_rerankers = [item for item in RERANKER_MODEL_OPTIONS if item != "Custom"]
+        default_reranker_choice = (
+            current_reranker_model if current_reranker_model in known_rerankers else "Custom"
+        )
+        reranker_choice = st.selectbox(
+            "Reranker model preset",
+            options=RERANKER_MODEL_OPTIONS,
+            index=RERANKER_MODEL_OPTIONS.index(default_reranker_choice),
+            key="rag-reranker-model-preset",
             disabled=not reranker_enabled,
         )
+        if reranker_choice == "Custom":
+            reranker_model = st.text_input(
+                "Reranker model name (CrossEncoder)",
+                value=(current_reranker_model if current_reranker_model not in known_rerankers else ""),
+                key="rag-reranker-model",
+                disabled=not reranker_enabled,
+            )
+        else:
+            reranker_model = reranker_choice
+            st.session_state["rag-reranker-model"] = reranker_model
         reranker_top_n = st.slider(
             "Reranker top-N",
             min_value=4,
@@ -2066,7 +2109,6 @@ def render_ask_books_rag_page(
             key="rag-ollama-timeout",
             disabled=generation_mode != "ollama",
         )
-
         st.header("Ask Books Filters")
         selected_categories = st.multiselect("Category", all_categories, default=all_categories, key="rag-category")
         selected_modes = st.multiselect(
@@ -2627,10 +2669,38 @@ def main() -> None:
         return
 
     if view_page == "Ask Books (RAG)":
-        chunk_index_dir = st.sidebar.text_input(
-            "RAG chunk index directory",
-            str(DEFAULT_CHUNK_INDEX_DIR),
+        default_chunk_index_dir = (
+            str(DEFAULT_CHUNK_INDEX_DIR_GTE_LARGE)
+            if DEFAULT_CHUNK_INDEX_DIR_GTE_LARGE.exists()
+            else str(DEFAULT_CHUNK_INDEX_DIR)
         )
+        current_chunk_index_dir = str(
+            st.session_state.get("rag-chunk-index-dir", default_chunk_index_dir) or ""
+        ).strip()
+        chunk_index_options = _rag_chunk_index_directory_options()
+        known_chunk_index_dirs = [item for item in chunk_index_options if item != "Custom"]
+        default_chunk_index_choice = (
+            current_chunk_index_dir if current_chunk_index_dir in known_chunk_index_dirs else "Custom"
+        )
+        chunk_index_choice = st.sidebar.selectbox(
+            "RAG chunk index preset",
+            options=chunk_index_options,
+            index=chunk_index_options.index(default_chunk_index_choice),
+            key="rag-chunk-index-preset",
+        )
+        if chunk_index_choice == "Custom":
+            chunk_index_dir = st.sidebar.text_input(
+                "RAG chunk index directory",
+                value=(
+                    current_chunk_index_dir
+                    if current_chunk_index_dir not in known_chunk_index_dirs
+                    else default_chunk_index_dir
+                ),
+                key="rag-chunk-index-dir",
+            )
+        else:
+            chunk_index_dir = str(chunk_index_choice)
+            st.session_state["rag-chunk-index-dir"] = chunk_index_dir
         try:
             rag_service = load_rag_service(chunk_index_dir)
         except Exception as exc:

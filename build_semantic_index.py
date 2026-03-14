@@ -30,7 +30,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--model",
         default="sentence-transformers/all-MiniLM-L6-v2",
-        help="Sentence-transformers model name.",
+        help="Text sentence-transformers model name.",
     )
     parser.add_argument(
         "--batch-size",
@@ -103,7 +103,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     with (args.output_dir / "metadata.json").open("w", encoding="utf-8") as handle:
         json.dump(rows, handle, ensure_ascii=False, indent=2)
     with (args.output_dir / "model_info.json").open("w", encoding="utf-8") as handle:
-        json.dump({"model_name": args.model, "num_items": len(rows)}, handle, indent=2)
+        json.dump(
+            {
+                "model_name": args.model,
+                "num_items": len(rows),
+            },
+            handle,
+            indent=2,
+        )
 
     indexed_kind = "chunks" if rows and "chunk_text" in rows[0] else "books"
     print(f"Wrote semantic index to: {args.output_dir.resolve()}")

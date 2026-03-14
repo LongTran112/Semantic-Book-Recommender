@@ -7,6 +7,8 @@ This guide deploys EBooksSorter with four containers:
 - `ollama` (local model runtime)
 - `nginx` (TLS reverse proxy)
 
+This deployment is text-RAG focused and does not include image-generation services.
+
 ## 1) VM Sizing and Storage
 
 Recommended baseline for `granite3.3:8b` on CPU-only Ollama:
@@ -75,7 +77,7 @@ What this validates:
 - TLS cert files are present
 - chunk index artifacts exist
 - `docker compose config` is valid
-- API image builds
+- API container builds
 
 ## 5) Bootstrap/Refresh Indexes
 
@@ -90,6 +92,8 @@ This script runs:
 1. `index_books.py`
 2. semantic index build (`output/semantic_index`)
 3. chunk index build (`output/semantic_index_chunks`)
+
+Current behavior: chunk/book index builds index text/chunk records provided by semantic source JSONL.
 
 ## 6) Start Production Stack
 

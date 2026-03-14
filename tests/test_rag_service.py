@@ -118,6 +118,19 @@ class RagServiceTests(unittest.TestCase):
             self.assertIn("[C1]", answer)
 
     @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
+    def test_factoid_query_returns_insufficient_evidence_when_topic_not_in_chunks(self, _mock_model) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            index_dir = _write_chunk_index(Path(tmp_dir))
+            service = RagService(index_dir)
+            response = service.answer_question(
+                query="Where is New Zealand?",
+                filters=RagFilters(),
+                top_k=4,
+            )
+            self.assertIn("could not find enough grounded evidence", response["answer"].lower())
+            self.assertIn("factoid query had weak grounding", response["fallback_reason"].lower())
+
+    @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
     def test_hybrid_retrieval_includes_lexical_signals(self, _mock_model) -> None:
         with TemporaryDirectory() as tmp_dir:
             index_dir = _write_chunk_index(Path(tmp_dir))
@@ -203,6 +216,58 @@ class RagServiceTests(unittest.TestCase):
             self.assertEqual(response["generation_mode"], "deterministic")
             self.assertTrue(response["fallback_reason"])
             self.assertIn("[C1]", response["answer"])
+
+    @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
+    @patch("semantic_books.rag_service.create_generator")
+    def test_disable_fallback_keeps_raw_invalid_output(
+        self,
+        mock_create_generator,
+        _mock_model,
+    ) -> None:
+        class _BadGenerator:
+            def generate(self, _prompt: str) -> GenerationResult:
+                return GenerationResult(text="Answer: This has no citations.", backend="llama.cpp")
+
+        mock_create_generator.return_value = _BadGenerator()
+        with TemporaryDirectory() as tmp_dir:
+            index_dir = _write_chunk_index(Path(tmp_dir))
+            service = RagService(index_dir)
+            response = service.answer_question(
+                query="Give me deep learning theory foundations",
+                filters=RagFilters(categories=["DeepLearning"]),
+                retrieval_config=RetrievalConfig(final_top_k=4),
+                llm_config=LlamaCppConfig(enabled=True, model_path="/tmp/model.gguf"),
+                allow_fallback=False,
+            )
+            self.assertEqual(response["generation_mode"], "llama.cpp")
+            self.assertEqual(response["answer"], "Answer: This has no citations.")
+            self.assertFalse(response["fallback_reason"])
+
+    @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
+    @patch("semantic_books.rag_service.create_generator")
+    def test_disable_fallback_does_not_force_deterministic_answer_without_raw_text(
+        self,
+        mock_create_generator,
+        _mock_model,
+    ) -> None:
+        class _ErrorGenerator:
+            def generate(self, _prompt: str) -> GenerationResult:
+                return GenerationResult(text="", backend="llama.cpp", error="backend failure")
+
+        mock_create_generator.return_value = _ErrorGenerator()
+        with TemporaryDirectory() as tmp_dir:
+            index_dir = _write_chunk_index(Path(tmp_dir))
+            service = RagService(index_dir)
+            response = service.answer_question(
+                query="Give me deep learning theory foundations",
+                filters=RagFilters(categories=["DeepLearning"]),
+                retrieval_config=RetrievalConfig(final_top_k=4),
+                llm_config=LlamaCppConfig(enabled=True, model_path="/tmp/model.gguf"),
+                allow_fallback=False,
+            )
+            self.assertEqual(response["generation_mode"], "llama.cpp")
+            self.assertIn("Deterministic fallback is disabled", response["answer"])
+            self.assertIn("backend failure", response["fallback_reason"])
 
     @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
     @patch("semantic_books.rag_service.create_generator")
@@ -326,7 +391,6 @@ class RagServiceTests(unittest.TestCase):
             )
             self.assertEqual(response["generation_mode"], "deterministic")
             self.assertIn("citation markers", response["fallback_reason"])
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -47,7 +47,7 @@ class SemanticSearchService:
 
         with model_info_path.open("r", encoding="utf-8") as handle:
             model_info = json.load(handle)
-        model_name = model_info.get("model_name")
+        model_name = model_info.get("text_model_name", model_info.get("model_name"))
         if not isinstance(model_name, str) or not model_name:
             raise ValueError("Invalid model_info.json: model_name missing.")
 

@@ -4,6 +4,7 @@ numpy
 sentence-transformers
 streamlit
 pypdfium2
+Pillow
 ebooklib
 beautifulsoup4
 plotly
