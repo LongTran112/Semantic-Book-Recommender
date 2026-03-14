@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 
 @dataclass
@@ -12,11 +12,15 @@ class RetrievalConfig:
     hybrid_enabled: bool = True
     dense_weight: float = 0.7
     lexical_weight: float = 0.3
+    image_weight: float = 0.2
     candidate_pool_size: int = 48
     final_top_k: int = 8
     reranker_enabled: bool = True
     reranker_model_name: Optional[str] = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     reranker_top_n: int = 32
+    modalities: Sequence[str] = field(default_factory=lambda: ["text", "image"])
+    query_image_path: str = ""
+    visual_model_tag: str = ""
 
 
 @dataclass
@@ -53,3 +57,19 @@ class OllamaConfig:
         if not value:
             return "http://127.0.0.1:11434"
         return value
+
+
+@dataclass
+class ImageGenerationConfig:
+    enabled: bool = False
+    provider: str = "none"
+    endpoint_url: str = "http://127.0.0.1:7860/sdapi/v1/txt2img"
+    output_dir: str = "output/generated_images"
+    num_images: int = 1
+    width: int = 768
+    height: int = 768
+    guidance_scale: float = 7.0
+    steps: int = 25
+    negative_prompt: str = ""
+    prompt_suffix: str = "clean diagram style, high detail"
+    timeout_sec: int = 120

@@ -67,6 +67,96 @@ def _write_chunk_index(base_dir: Path) -> Path:
     return index_dir
 
 
+def _write_multimodal_chunk_index(base_dir: Path) -> Path:
+    index_dir = base_dir / "semantic_index_chunks_mm"
+    index_dir.mkdir(parents=True, exist_ok=True)
+    vectors = np.array([[1.0, 0.0], [0.0, 1.0], [0.2, 0.8]], dtype=np.float32)
+    np.save(index_dir / "vectors.npy", vectors)
+    image_vectors = np.array([[0.2, 0.8]], dtype=np.float32)
+    np.save(index_dir / "image_vectors.npy", image_vectors)
+    metadata = [
+        {
+            "chunk_id": "c1",
+            "book_id": "b1",
+            "title": "Deep Learning Theory",
+            "category": "DeepLearning",
+            "learning_mode": "theory",
+            "absolute_path": "/tmp/a.pdf",
+            "source_type": "body_preview",
+            "source_index": 0,
+            "start_char": 0,
+            "end_char": 120,
+            "chunk_order": 0,
+            "chunk_len": 120,
+            "section_label": "body_preview",
+            "chunk_text": "Deep learning is a subset of machine learning using multilayer neural networks.",
+            "modality": "text",
+            "image_path": "",
+            "image_caption": "",
+            "page_num": 0,
+        },
+        {
+            "chunk_id": "c2",
+            "book_id": "b2",
+            "title": "Linux Practical Guide",
+            "category": "Linux-SystemProgramming",
+            "learning_mode": "practical",
+            "absolute_path": "/tmp/b.pdf",
+            "source_type": "body_preview",
+            "source_index": 0,
+            "start_char": 0,
+            "end_char": 120,
+            "chunk_order": 0,
+            "chunk_len": 120,
+            "section_label": "body_preview",
+            "chunk_text": "Linux shell practical workflow and command-line scripting examples.",
+            "modality": "text",
+            "image_path": "",
+            "image_caption": "",
+            "page_num": 0,
+        },
+        {
+            "chunk_id": "img1",
+            "book_id": "b1",
+            "title": "Deep Learning Theory",
+            "category": "DeepLearning",
+            "learning_mode": "theory",
+            "absolute_path": "/tmp/a.pdf",
+            "source_type": "page_image",
+            "source_index": 0,
+            "start_char": 0,
+            "end_char": 0,
+            "chunk_order": 0,
+            "chunk_len": 0,
+            "section_label": "page_image",
+            "chunk_text": "",
+            "modality": "image",
+            "image_path": "/tmp/a_p1.png",
+            "image_caption": "diagram of deep neural network layers",
+            "page_num": 1,
+        },
+    ]
+    with (index_dir / "metadata.json").open("w", encoding="utf-8") as handle:
+        json.dump(metadata, handle)
+    with (index_dir / "image_metadata.json").open("w", encoding="utf-8") as handle:
+        json.dump([metadata[2]], handle)
+    with (index_dir / "model_info.json").open("w", encoding="utf-8") as handle:
+        json.dump(
+            {
+                "schema_version": "v2",
+                "model_name": "fake-model",
+                "text_model_name": "fake-model",
+                "image_model_name": "fake-model",
+                "num_items": 3,
+                "num_image_items": 1,
+                "has_image_vectors": True,
+                "modalities": ["text", "image"],
+            },
+            handle,
+        )
+    return index_dir
+
+
 class RagServiceTests(unittest.TestCase):
     @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
     def test_answer_question_returns_grounded_citations(self, _mock_model) -> None:
@@ -326,6 +416,51 @@ class RagServiceTests(unittest.TestCase):
             )
             self.assertEqual(response["generation_mode"], "deterministic")
             self.assertIn("citation markers", response["fallback_reason"])
+
+    @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
+    def test_multimodal_retrieval_returns_image_citation_when_requested(self, _mock_model) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            index_dir = _write_multimodal_chunk_index(Path(tmp_dir))
+            service = RagService(index_dir)
+            chunks = service.retrieve_chunks(
+                query="show the network diagram",
+                filters=RagFilters(categories=["DeepLearning"]),
+                retrieval_config=RetrievalConfig(
+                    modalities=["image"],
+                    image_weight=1.0,
+                    dense_weight=0.0,
+                    lexical_weight=0.0,
+                    hybrid_enabled=True,
+                    final_top_k=2,
+                ),
+            )
+            self.assertTrue(chunks)
+            self.assertEqual(chunks[0]["modality"], "image")
+            self.assertIn("image_score", chunks[0])
+
+    @patch("semantic_books.rag_service.SentenceTransformer", return_value=_FakeModel())
+    @patch("semantic_books.rag_service.create_image_generator")
+    def test_answer_question_includes_generated_images_when_enabled(
+        self,
+        mock_create_image_generator,
+        _mock_model,
+    ) -> None:
+        class _FakeImageGenerator:
+            def generate(self, prompt: str):
+                return [{"provider": "stable-diffusion-api", "prompt": prompt, "image_path": "/tmp/x.png"}]
+
+        from semantic_books.rag_config import ImageGenerationConfig
+
+        mock_create_image_generator.return_value = _FakeImageGenerator()
+        with TemporaryDirectory() as tmp_dir:
+            index_dir = _write_chunk_index(Path(tmp_dir))
+            service = RagService(index_dir)
+            response = service.answer_question(
+                query="Give me deep learning theory foundations",
+                filters=RagFilters(categories=["DeepLearning"]),
+                image_generation_config=ImageGenerationConfig(enabled=True, provider="sdapi"),
+            )
+            self.assertTrue(response["generated_images"])
 
 
 if __name__ == "__main__":

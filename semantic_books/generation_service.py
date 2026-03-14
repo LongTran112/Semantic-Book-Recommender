@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import base64
 import json
+from pathlib import Path
 import re
-from typing import Callable, Optional, Protocol
+import time
+from typing import Any, Callable, Dict, List, Optional, Protocol
 import urllib.error
 import urllib.request
 
-from semantic_books.rag_config import LlamaCppConfig, OllamaConfig
+from semantic_books.rag_config import ImageGenerationConfig, LlamaCppConfig, OllamaConfig
 
 try:
     from llama_cpp import Llama
@@ -25,6 +28,11 @@ class GeneratorBackend(Protocol):
         should_cancel: Optional[Callable[[], bool]] = None,
     ) -> "GenerationResult":
         """Generate plain text from prompt."""
+
+
+class ImageGeneratorBackend(Protocol):
+    def generate(self, prompt: str) -> List[Dict[str, Any]]:
+        """Generate images from prompt and return metadata payloads."""
 
 
 @dataclass
@@ -251,4 +259,70 @@ def create_generator(
         return OllamaGenerator(ollama_cfg)
     if llama_cfg is not None and bool(llama_cfg.enabled):
         return LlamaCppGenerator(llama_cfg)
+    return None
+
+
+class StableDiffusionApiImageGenerator:
+    """Simple txt2img adapter for local Stable Diffusion API."""
+
+    def __init__(self, cfg: ImageGenerationConfig) -> None:
+        self.cfg = cfg
+
+    def _safe_output_dir(self) -> Path:
+        output_dir = Path(str(self.cfg.output_dir or "output/generated_images")).expanduser()
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return output_dir
+
+    def generate(self, prompt: str) -> List[Dict[str, Any]]:
+        body = {
+            "prompt": str(prompt or "").strip(),
+            "negative_prompt": str(self.cfg.negative_prompt or ""),
+            "width": max(256, int(self.cfg.width)),
+            "height": max(256, int(self.cfg.height)),
+            "steps": max(8, int(self.cfg.steps)),
+            "cfg_scale": max(1.0, float(self.cfg.guidance_scale)),
+            "batch_size": max(1, int(self.cfg.num_images)),
+        }
+        request = urllib.request.Request(
+            url=str(self.cfg.endpoint_url).strip(),
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=max(5, int(self.cfg.timeout_sec))) as response:
+            raw_body = response.read().decode("utf-8", errors="replace")
+        payload = json.loads(raw_body) if raw_body.strip() else {}
+        images = payload.get("images", []) if isinstance(payload, dict) else []
+        if not isinstance(images, list):
+            return []
+        out: List[Dict[str, Any]] = []
+        output_dir = self._safe_output_dir()
+        stamp = int(time.time() * 1000)
+        for idx, item in enumerate(images, start=1):
+            if not isinstance(item, str) or not item.strip():
+                continue
+            filename = f"generated_{stamp}_{idx}.png"
+            file_path = output_dir / filename
+            try:
+                binary = base64.b64decode(item)
+                file_path.write_bytes(binary)
+            except Exception:
+                continue
+            out.append(
+                {
+                    "provider": "stable-diffusion-api",
+                    "prompt": str(prompt or ""),
+                    "image_path": str(file_path),
+                    "is_synthetic": True,
+                }
+            )
+        return out
+
+
+def create_image_generator(cfg: Optional[ImageGenerationConfig]) -> Optional[ImageGeneratorBackend]:
+    if cfg is None or not bool(cfg.enabled):
+        return None
+    provider = str(cfg.provider or "none").strip().lower()
+    if provider in {"sdapi", "stable-diffusion", "automatic1111"}:
+        return StableDiffusionApiImageGenerator(cfg)
     return None

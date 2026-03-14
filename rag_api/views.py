@@ -24,6 +24,7 @@ from .guardrails import require_guardrails
 from .serializers import RagRequestSerializer
 from .services import (
     build_filters,
+    build_image_generation,
     build_llm,
     build_ollama,
     build_retrieval,
@@ -151,6 +152,7 @@ class RagAnswerView(APIView):
             retrieval = build_retrieval(dict(payload.get("retrieval", {})), top_k=top_k)
             llm = build_llm(dict(payload.get("llm", {})))
             ollama = build_ollama(dict(payload.get("ollama", {})))
+            image_generation = build_image_generation(dict(payload.get("image_generation", {})))
             response = rag_service.answer_question(
                 query=query,
                 filters=filters,
@@ -160,6 +162,7 @@ class RagAnswerView(APIView):
                 llm_config=llm,
                 ollama_config=ollama,
                 allow_fallback=allow_fallback,
+                image_generation_config=image_generation,
             )
         except APIException:
             raise
@@ -194,6 +197,7 @@ class RagAnswerLangChainView(APIView):
             retrieval = build_retrieval(dict(payload.get("retrieval", {})), top_k=top_k)
             llm = build_llm(dict(payload.get("llm", {})))
             ollama = build_ollama(dict(payload.get("ollama", {})))
+            image_generation = build_image_generation(dict(payload.get("image_generation", {})))
 
             retriever = RagServiceRetriever(
                 rag_service=rag_service,
@@ -212,6 +216,7 @@ class RagAnswerLangChainView(APIView):
                     llm_config=llm,
                     ollama_config=ollama,
                     allow_fallback=allow_fallback,
+                    image_generation_config=image_generation,
                 )
                 fallback["fallback_reason"] = "LangChain retriever returned no documents."
                 return Response(redact_answer_payload(fallback))
@@ -228,6 +233,7 @@ class RagAnswerLangChainView(APIView):
                     llm_config=llm,
                     ollama_config=ollama,
                     allow_fallback=allow_fallback,
+                    image_generation_config=image_generation,
                 )
                 fallback["fallback_reason"] = "LangChain chain unavailable; used canonical RAG answer."
                 return Response(redact_answer_payload(fallback))
@@ -245,6 +251,7 @@ class RagAnswerLangChainView(APIView):
                     llm_config=llm,
                     ollama_config=ollama,
                     allow_fallback=allow_fallback,
+                    image_generation_config=image_generation,
                 )
                 fallback["fallback_reason"] = "LangChain output missing valid citation markers."
                 return Response(redact_answer_payload(fallback))
@@ -262,6 +269,7 @@ class RagAnswerLangChainView(APIView):
                     "citations": [redact_path_value(item) for item in citations],
                     "generation_mode": "langchain",
                     "fallback_reason": "",
+                    "generated_images": [],
                 }
             )
         except APIException:
@@ -295,6 +303,7 @@ class RagAnswerStreamView(APIView):
         retrieval = build_retrieval(dict(payload.get("retrieval", {})), top_k=top_k)
         llm = build_llm(dict(payload.get("llm", {})))
         ollama = build_ollama(dict(payload.get("ollama", {})))
+        image_generation = build_image_generation(dict(payload.get("image_generation", {})))
 
         events: "Queue[Optional[Dict[str, Any]]]" = Queue()
         cancel_event = threading.Event()
@@ -317,6 +326,7 @@ class RagAnswerStreamView(APIView):
                     on_token=_on_token if bool(ollama.enabled or llm.enabled) else None,
                     should_cancel=cancel_event.is_set,
                     allow_fallback=allow_fallback,
+                    image_generation_config=image_generation,
                 )
                 if not cancel_event.is_set():
                     events.put({"type": "final", "response": redact_answer_payload(response)})

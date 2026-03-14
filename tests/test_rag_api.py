@@ -39,6 +39,10 @@ class _FakeRagService:
                 "chunk_len": 120,
                 "section_label": "body_preview",
                 "chunk_text": "Deep learning theory includes optimization and backpropagation foundations.",
+                "modality": "text",
+                "image_path": "/tmp/preview.png",
+                "image_caption": "",
+                "page_num": 0,
                 "similarity": 0.92,
             }
         ]
@@ -69,6 +73,14 @@ class _FakeRagService:
             ],
             "generation_mode": "deterministic",
             "fallback_reason": "",
+            "generated_images": [
+                {
+                    "provider": "stable-diffusion-api",
+                    "prompt": "deep learning concept map",
+                    "image_path": "/tmp/generated.png",
+                    "is_synthetic": True,
+                }
+            ],
             "metrics": {
                 "total_ms": 123.4,
                 "retrieval_ms": 23.4,
@@ -165,6 +177,41 @@ class RagApiTests(unittest.TestCase):
         self.assertFalse(fake.last_answer_kwargs["llm_config"].enabled)
         self.assertFalse(fake.last_answer_kwargs["ollama_config"].enabled)
         self.assertEqual(payload["citations"][0]["absolute_path"], "")
+        self.assertEqual(payload["citations"][0]["image_path"], "")
+        self.assertEqual(payload["generated_images"][0]["image_path"], "")
+
+    @patch("rag_api.views.get_rag_service")
+    def test_answer_endpoint_accepts_multimodal_and_image_generation(self, mock_get_service) -> None:
+        fake = _FakeRagService()
+        mock_get_service.return_value = fake
+        response = self.client.post(
+            "/rag/answer",
+            data=json.dumps(
+                {
+                    "query": "deep learning diagram",
+                    "retrieval": {
+                        "modalities": ["text", "image"],
+                        "query_image_path": "/tmp/query.png",
+                        "image_weight": 0.4,
+                    },
+                    "image_generation": {
+                        "enabled": True,
+                        "provider": "sdapi",
+                        "endpoint_url": "http://127.0.0.1:7860/sdapi/v1/txt2img",
+                        "num_images": 1,
+                    },
+                }
+            ),
+            content_type="application/json",
+            **self.headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        retrieval_cfg = fake.last_answer_kwargs["retrieval_config"]
+        image_gen_cfg = fake.last_answer_kwargs["image_generation_config"]
+        self.assertIn("image", [str(item) for item in retrieval_cfg.modalities])
+        self.assertEqual(retrieval_cfg.query_image_path, "/tmp/query.png")
+        self.assertTrue(image_gen_cfg.enabled)
+        self.assertEqual(image_gen_cfg.provider, "sdapi")
 
     @patch("rag_api.views.get_rag_service")
     def test_answer_endpoint_accepts_ollama_config(self, mock_get_service) -> None:

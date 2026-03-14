@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -11,6 +12,14 @@ from typing import Any, Dict, List, Sequence
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
+try:
+    from PIL import Image
+except ImportError:  # pragma: no cover - optional at runtime
+    Image = None  # type: ignore[assignment]
+try:
+    import pypdfium2
+except ImportError:  # pragma: no cover - optional at runtime
+    pypdfium2 = None  # type: ignore[assignment]
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -30,13 +39,41 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--model",
         default="sentence-transformers/all-MiniLM-L6-v2",
-        help="Sentence-transformers model name.",
+        help="Text sentence-transformers model name.",
     )
     parser.add_argument(
         "--batch-size",
         type=int,
         default=32,
         help="Embedding batch size.",
+    )
+    parser.add_argument(
+        "--enable-multimodal",
+        action="store_true",
+        help="Enable multimodal image-index artifacts (keeps text vectors compatibility).",
+    )
+    parser.add_argument(
+        "--multimodal-model",
+        default="nomic-ai/nomic-embed-multimodal-3b",
+        help="Multimodal image embedding model identifier.",
+    )
+    parser.add_argument(
+        "--batch-size-image",
+        type=int,
+        default=4,
+        help="Image embedding batch size.",
+    )
+    parser.add_argument(
+        "--max-image-side",
+        type=int,
+        default=1024,
+        help="Maximum side length when loading images for multimodal embeddings.",
+    )
+    parser.add_argument(
+        "--image-cache-dir",
+        type=Path,
+        default=Path("./output/semantic_images"),
+        help="Directory for extracted PDF preview images used by multimodal indexing.",
     )
     return parser.parse_args(argv)
 
@@ -56,6 +93,17 @@ def load_records(path: Path) -> List[Dict[str, Any]]:
 
 
 def build_embedding_text(record: Dict[str, Any]) -> str:
+    modality = str(record.get("modality", "text") or "text")
+    if modality == "image":
+        parts = [
+            str(record.get("title", "") or ""),
+            str(record.get("category", "") or ""),
+            str(record.get("learning_mode", "") or ""),
+            str(record.get("section_label", "") or ""),
+            str(record.get("image_caption", "") or ""),
+            str(record.get("chunk_text", "") or ""),
+        ]
+        return "\n".join(part for part in parts if part.strip())
     if "chunk_text" in record:
         parts = [
             str(record.get("title", "") or ""),
@@ -80,9 +128,128 @@ def build_embedding_text(record: Dict[str, Any]) -> str:
     return "\n".join(part for part in parts if part.strip())
 
 
+def _ensure_v2_defaults(record: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(record)
+    out.setdefault("modality", "text")
+    out.setdefault("image_path", "")
+    out.setdefault("image_caption", "")
+    out.setdefault("page_num", 0)
+    return out
+
+
+def _render_pdf_preview(pdf_path: Path, output_path: Path, max_image_side: int) -> bool:
+    if pypdfium2 is None or Image is None:
+        return False
+    try:
+        doc = pypdfium2.PdfDocument(str(pdf_path))
+        page = doc[0]
+        bitmap = page.render(scale=2.0).to_pil()
+        if max(bitmap.size) > max(64, int(max_image_side)):
+            bitmap.thumbnail((int(max_image_side), int(max_image_side)))
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        bitmap.save(output_path)
+        return True
+    except Exception:
+        return False
+
+
+def _build_preview_image_rows(rows: Sequence[Dict[str, Any]], image_cache_dir: Path, max_image_side: int) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    seen_books = set()
+    for row in rows:
+        book_id = str(row.get("book_id", "") or "")
+        if not book_id or book_id in seen_books:
+            continue
+        seen_books.add(book_id)
+        abs_path = Path(str(row.get("absolute_path", "") or ""))
+        if abs_path.suffix.lower() != ".pdf" or not abs_path.exists():
+            continue
+        digest = hashlib.sha1(str(abs_path).encode("utf-8")).hexdigest()[:16]
+        image_path = image_cache_dir / f"{book_id}_{digest}_p1.png"
+        if not image_path.exists():
+            ok = _render_pdf_preview(abs_path, image_path, max_image_side=max_image_side)
+            if not ok:
+                continue
+        out.append(
+            {
+                "chunk_id": f"img_{book_id}_{digest}",
+                "book_id": book_id,
+                "title": str(row.get("title", "") or ""),
+                "category": str(row.get("category", "Other") or "Other"),
+                "learning_mode": str(row.get("learning_mode", "unknown") or "unknown"),
+                "absolute_path": str(abs_path),
+                "source_type": "page_image",
+                "source_index": 0,
+                "start_char": 0,
+                "end_char": 0,
+                "chunk_order": 0,
+                "chunk_len": 0,
+                "section_label": "page_image",
+                "chunk_text": "",
+                "modality": "image",
+                "image_path": str(image_path),
+                "image_caption": f"Page preview image for {str(row.get('title', '') or 'Untitled')}",
+                "page_num": 1,
+            }
+        )
+    return out
+
+
+def _load_image(path: Path, max_image_side: int) -> Any:
+    if Image is None:
+        raise RuntimeError("Pillow is required for multimodal image indexing.")
+    image = Image.open(path).convert("RGB")
+    if max(image.size) > max(64, int(max_image_side)):
+        image.thumbnail((int(max_image_side), int(max_image_side)))
+    return image
+
+
+def _encode_image_rows(
+    rows: Sequence[Dict[str, Any]],
+    model_name: str,
+    batch_size: int,
+    max_image_side: int,
+) -> np.ndarray:
+    model = SentenceTransformer(model_name)
+    images: List[Any] = []
+    for row in rows:
+        image_path = Path(str(row.get("image_path", "") or ""))
+        if image_path.exists():
+            images.append(_load_image(image_path, max_image_side=max_image_side))
+        else:
+            images.append(Image.new("RGB", (64, 64), color="white") if Image is not None else None)
+    try:
+        vectors = model.encode(
+            images,
+            batch_size=max(1, batch_size),
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+            show_progress_bar=True,
+        )
+    except Exception:
+        # Fallback: embed image captions as text when image encoder is unavailable.
+        fallback_texts = [build_embedding_text(row) for row in rows]
+        vectors = model.encode(
+            fallback_texts,
+            batch_size=max(1, batch_size),
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+            show_progress_bar=True,
+        )
+    return np.asarray(vectors, dtype=np.float32)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
-    rows = load_records(args.semantic_source)
+    rows = [_ensure_v2_defaults(item) for item in load_records(args.semantic_source)]
+    if args.enable_multimodal:
+        preview_rows = _build_preview_image_rows(
+            rows,
+            image_cache_dir=args.image_cache_dir,
+            max_image_side=int(args.max_image_side),
+        )
+        if preview_rows:
+            rows = rows + preview_rows
     if not rows:
         print("No semantic source rows found.")
         return 1
@@ -100,14 +267,41 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     np.save(args.output_dir / "vectors.npy", vectors)
+    image_rows = [row for row in rows if str(row.get("modality", "text")) == "image"]
+    image_vectors = None
+    if args.enable_multimodal and image_rows:
+        image_vectors = _encode_image_rows(
+            image_rows,
+            model_name=str(args.multimodal_model),
+            batch_size=int(args.batch_size_image),
+            max_image_side=int(args.max_image_side),
+        )
+        np.save(args.output_dir / "image_vectors.npy", image_vectors)
+        with (args.output_dir / "image_metadata.json").open("w", encoding="utf-8") as handle:
+            json.dump(image_rows, handle, ensure_ascii=False, indent=2)
     with (args.output_dir / "metadata.json").open("w", encoding="utf-8") as handle:
         json.dump(rows, handle, ensure_ascii=False, indent=2)
     with (args.output_dir / "model_info.json").open("w", encoding="utf-8") as handle:
-        json.dump({"model_name": args.model, "num_items": len(rows)}, handle, indent=2)
+        json.dump(
+            {
+                "schema_version": "v2",
+                "model_name": args.model,
+                "text_model_name": args.model,
+                "image_model_name": (args.multimodal_model if args.enable_multimodal else ""),
+                "num_items": len(rows),
+                "num_image_items": len(image_rows),
+                "has_image_vectors": bool(image_vectors is not None),
+                "modalities": sorted({str(row.get("modality", "text")) for row in rows}),
+            },
+            handle,
+            indent=2,
+        )
 
     indexed_kind = "chunks" if rows and "chunk_text" in rows[0] else "books"
     print(f"Wrote semantic index to: {args.output_dir.resolve()}")
     print(f"Indexed {indexed_kind}: {len(rows)}")
+    if args.enable_multimodal:
+        print(f"Multimodal image items: {len(image_rows)}")
     return 0
 
 

@@ -40,7 +40,7 @@ except ImportError:  # pragma: no cover - optional runtime dependency
 
 from semantic_books.learning_mode import learning_mode_labels
 from semantic_books.daily_recommend import DailyBookRecommender, DailyRecommendationWeights
-from semantic_books.rag_config import LlamaCppConfig, OllamaConfig, RetrievalConfig
+from semantic_books.rag_config import ImageGenerationConfig, LlamaCppConfig, OllamaConfig, RetrievalConfig
 from semantic_books.rag_service import RagFilters, RagService
 from semantic_books.search_service import SearchFilters, SemanticSearchService
 
@@ -1199,10 +1199,14 @@ def _build_rag_answer_payload(
     use_hybrid: bool,
     dense_weight: float,
     lexical_weight: float,
+    image_weight: float,
     candidate_pool_size: int,
     reranker_enabled: bool,
     reranker_model: str,
     reranker_top_n: int,
+    retrieval_modalities: List[str],
+    query_image_path: str,
+    visual_model_tag: str,
     generation_mode: str,
     llama_model_path: str,
     llama_n_ctx: int,
@@ -1217,6 +1221,17 @@ def _build_rag_answer_payload(
     ollama_top_p: float,
     ollama_num_ctx: int,
     ollama_timeout_sec: int,
+    image_generation_enabled: bool,
+    image_generation_provider: str,
+    image_generation_endpoint_url: str,
+    image_generation_num_images: int,
+    image_generation_width: int,
+    image_generation_height: int,
+    image_generation_guidance_scale: float,
+    image_generation_steps: int,
+    image_generation_negative_prompt: str,
+    image_generation_prompt_suffix: str,
+    image_generation_timeout_sec: int,
     allow_fallback: bool,
 ) -> Dict[str, Any]:
     return {
@@ -1233,11 +1248,15 @@ def _build_rag_answer_payload(
             "hybrid_enabled": bool(use_hybrid),
             "dense_weight": float(dense_weight),
             "lexical_weight": float(lexical_weight),
+            "image_weight": float(image_weight),
             "candidate_pool_size": int(candidate_pool_size),
             "final_top_k": int(top_k_chunks),
             "reranker_enabled": bool(reranker_enabled),
             "reranker_model_name": str(reranker_model).strip() if reranker_enabled else None,
             "reranker_top_n": int(reranker_top_n),
+            "modalities": retrieval_modalities or ["text"],
+            "query_image_path": str(query_image_path).strip(),
+            "visual_model_tag": str(visual_model_tag).strip(),
         },
         "llm": {
             "enabled": generation_mode == "llama.cpp",
@@ -1257,6 +1276,19 @@ def _build_rag_answer_payload(
             "top_p": float(ollama_top_p),
             "num_ctx": int(ollama_num_ctx),
             "timeout_sec": int(ollama_timeout_sec),
+        },
+        "image_generation": {
+            "enabled": bool(image_generation_enabled),
+            "provider": str(image_generation_provider).strip(),
+            "endpoint_url": str(image_generation_endpoint_url).strip(),
+            "num_images": int(image_generation_num_images),
+            "width": int(image_generation_width),
+            "height": int(image_generation_height),
+            "guidance_scale": float(image_generation_guidance_scale),
+            "steps": int(image_generation_steps),
+            "negative_prompt": str(image_generation_negative_prompt),
+            "prompt_suffix": str(image_generation_prompt_suffix),
+            "timeout_sec": int(image_generation_timeout_sec),
         },
     }
 
@@ -1333,6 +1365,20 @@ def _render_rag_chat_response(
                 st.rerun()
 
     citations = response.get("citations", []) or []
+    generated_images = response.get("generated_images", []) or []
+    image_generation_error = str(response.get("image_generation_error", "") or "").strip()
+    if generated_images:
+        st.markdown(f"**Generated images ({len(generated_images)})**")
+        for img_idx, image_item in enumerate(generated_images):
+            image_path = str(image_item.get("image_path", "") or "")
+            caption = str(image_item.get("prompt", "") or "Generated image")
+            if image_path and Path(image_path).exists():
+                st.image(image_path, caption=caption, use_container_width=True)
+            else:
+                st.info(f"Generated image {img_idx + 1}: {caption}")
+    elif image_generation_error:
+        st.warning(f"Image generation failed: {image_generation_error}")
+
     st.markdown(f"**Citations ({len(citations)})**")
     if not citations:
         st.info("No citations found for this question.")
@@ -1346,6 +1392,13 @@ def _render_rag_chat_response(
         )
         with st.expander(label, expanded=False):
             st.write(str(item.get("snippet", "")))
+            citation_image_path = str(item.get("image_path", "") or "")
+            if citation_image_path and Path(citation_image_path).exists():
+                st.image(
+                    citation_image_path,
+                    caption=f"Retrieved image evidence (page {int(item.get('page_num', 0) or 0)})",
+                    use_container_width=True,
+                )
             if st.button(
                 "Open Source Location",
                 key=f"rag-open-source-{turn_idx}-{idx}-{item.get('book_id', '')}",
@@ -1923,6 +1976,33 @@ def render_ask_books_rag_page(
             key="rag-lexical-weight",
             disabled=not use_hybrid,
         )
+        image_weight = st.slider(
+            "Image weight",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.2,
+            step=0.05,
+            key="rag-image-weight",
+        )
+        retrieval_modalities = st.multiselect(
+            "Retrieval modalities",
+            ["text", "image"],
+            default=["text", "image"],
+            key="rag-retrieval-modalities",
+            help="Choose whether retrieval searches text, image evidence, or both.",
+        )
+        query_image_path = st.text_input(
+            "Query image path (optional)",
+            value="",
+            key="rag-query-image-path",
+            help="Optional local image path for visual similarity retrieval.",
+        )
+        visual_model_tag = st.text_input(
+            "Visual retrieval model tag",
+            value="nomic-ai/nomic-embed-multimodal-3b",
+            key="rag-visual-model-tag",
+            help="Model tag used for multimodal indexing/retrieval tracking.",
+        )
         candidate_pool_size = st.slider(
             "Candidate pool size",
             min_value=8,
@@ -2066,6 +2146,91 @@ def render_ask_books_rag_page(
             key="rag-ollama-timeout",
             disabled=generation_mode != "ollama",
         )
+        st.subheader("Image Output (Optional)")
+        image_generation_enabled = st.toggle(
+            "Generate synthetic images with answer",
+            value=False,
+            key="rag-image-gen-enabled",
+        )
+        image_generation_provider = st.selectbox(
+            "Image generation provider",
+            options=["sdapi", "none"],
+            index=0,
+            key="rag-image-gen-provider",
+            disabled=not image_generation_enabled,
+        )
+        image_generation_endpoint_url = st.text_input(
+            "Image generation endpoint",
+            value="http://127.0.0.1:7860/sdapi/v1/txt2img",
+            key="rag-image-gen-endpoint",
+            disabled=not image_generation_enabled,
+        )
+        image_generation_num_images = st.slider(
+            "Generated images",
+            min_value=1,
+            max_value=4,
+            value=1,
+            step=1,
+            key="rag-image-gen-count",
+            disabled=not image_generation_enabled,
+        )
+        image_generation_width = st.slider(
+            "Image width",
+            min_value=256,
+            max_value=1536,
+            value=768,
+            step=64,
+            key="rag-image-gen-width",
+            disabled=not image_generation_enabled,
+        )
+        image_generation_height = st.slider(
+            "Image height",
+            min_value=256,
+            max_value=1536,
+            value=768,
+            step=64,
+            key="rag-image-gen-height",
+            disabled=not image_generation_enabled,
+        )
+        image_generation_guidance_scale = st.slider(
+            "Guidance scale",
+            min_value=1.0,
+            max_value=20.0,
+            value=7.0,
+            step=0.5,
+            key="rag-image-gen-guidance",
+            disabled=not image_generation_enabled,
+        )
+        image_generation_steps = st.slider(
+            "Image diffusion steps",
+            min_value=8,
+            max_value=80,
+            value=25,
+            step=1,
+            key="rag-image-gen-steps",
+            disabled=not image_generation_enabled,
+        )
+        image_generation_negative_prompt = st.text_input(
+            "Negative prompt",
+            value="",
+            key="rag-image-gen-negative",
+            disabled=not image_generation_enabled,
+        )
+        image_generation_prompt_suffix = st.text_input(
+            "Prompt suffix",
+            value="clean diagram style, high detail",
+            key="rag-image-gen-suffix",
+            disabled=not image_generation_enabled,
+        )
+        image_generation_timeout_sec = st.slider(
+            "Image generation timeout (seconds)",
+            min_value=10,
+            max_value=300,
+            value=120,
+            step=5,
+            key="rag-image-gen-timeout",
+            disabled=not image_generation_enabled,
+        )
 
         st.header("Ask Books Filters")
         selected_categories = st.multiselect("Category", all_categories, default=all_categories, key="rag-category")
@@ -2150,10 +2315,14 @@ def render_ask_books_rag_page(
         use_hybrid=bool(use_hybrid),
         dense_weight=float(dense_weight),
         lexical_weight=float(lexical_weight),
+        image_weight=float(image_weight),
         candidate_pool_size=effective_candidate_pool_size,
         reranker_enabled=effective_reranker_enabled,
         reranker_model=str(reranker_model),
         reranker_top_n=effective_reranker_top_n,
+        retrieval_modalities=[str(item) for item in retrieval_modalities],
+        query_image_path=str(query_image_path),
+        visual_model_tag=str(visual_model_tag),
         generation_mode=effective_generation_mode,
         llama_model_path=str(llama_model_path),
         llama_n_ctx=int(llama_n_ctx),
@@ -2168,6 +2337,17 @@ def render_ask_books_rag_page(
         ollama_top_p=effective_ollama_top_p,
         ollama_num_ctx=effective_ollama_num_ctx,
         ollama_timeout_sec=effective_ollama_timeout_sec,
+        image_generation_enabled=bool(image_generation_enabled),
+        image_generation_provider=str(image_generation_provider),
+        image_generation_endpoint_url=str(image_generation_endpoint_url),
+        image_generation_num_images=int(image_generation_num_images),
+        image_generation_width=int(image_generation_width),
+        image_generation_height=int(image_generation_height),
+        image_generation_guidance_scale=float(image_generation_guidance_scale),
+        image_generation_steps=int(image_generation_steps),
+        image_generation_negative_prompt=str(image_generation_negative_prompt),
+        image_generation_prompt_suffix=str(image_generation_prompt_suffix),
+        image_generation_timeout_sec=int(image_generation_timeout_sec),
         allow_fallback=not disable_fallback,
     )
 
@@ -2191,11 +2371,15 @@ def render_ask_books_rag_page(
                     hybrid_enabled=bool(use_hybrid),
                     dense_weight=float(dense_weight),
                     lexical_weight=float(lexical_weight),
+                    image_weight=float(image_weight),
                     candidate_pool_size=effective_candidate_pool_size,
                     final_top_k=effective_top_k_chunks,
                     reranker_enabled=effective_reranker_enabled,
                     reranker_model_name=str(reranker_model).strip() if effective_reranker_enabled else None,
                     reranker_top_n=effective_reranker_top_n,
+                    modalities=[str(item) for item in retrieval_modalities],
+                    query_image_path=str(query_image_path).strip(),
+                    visual_model_tag=str(visual_model_tag).strip(),
                 )
                 llm_config = LlamaCppConfig(
                     enabled=effective_generation_mode == "llama.cpp",
@@ -2215,6 +2399,19 @@ def render_ask_books_rag_page(
                     top_p=effective_ollama_top_p,
                     num_ctx=effective_ollama_num_ctx,
                     timeout_sec=effective_ollama_timeout_sec,
+                )
+                image_generation_config = ImageGenerationConfig(
+                    enabled=bool(image_generation_enabled),
+                    provider=str(image_generation_provider).strip(),
+                    endpoint_url=str(image_generation_endpoint_url).strip(),
+                    num_images=int(image_generation_num_images),
+                    width=int(image_generation_width),
+                    height=int(image_generation_height),
+                    guidance_scale=float(image_generation_guidance_scale),
+                    steps=int(image_generation_steps),
+                    negative_prompt=str(image_generation_negative_prompt),
+                    prompt_suffix=str(image_generation_prompt_suffix),
+                    timeout_sec=int(image_generation_timeout_sec),
                 )
                 if effective_generation_mode != "ollama":
                     stream_status_placeholder.caption("Generating grounded answer...")
@@ -2239,6 +2436,7 @@ def render_ask_books_rag_page(
                     retrieval_config=retrieval_config,
                     llm_config=llm_config,
                     ollama_config=ollama_config,
+                    image_generation_config=image_generation_config,
                     on_token=_on_token if effective_generation_mode == "ollama" else None,
                     allow_fallback=not disable_fallback,
                 )

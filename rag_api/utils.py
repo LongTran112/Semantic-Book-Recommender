@@ -10,6 +10,8 @@ def redact_path_value(payload: Dict[str, Any]) -> Dict[str, Any]:
     clean = dict(payload)
     if "absolute_path" in clean:
         clean["absolute_path"] = ""
+    if "image_path" in clean:
+        clean["image_path"] = ""
     return clean
 
 
@@ -21,7 +23,18 @@ def redact_answer_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     clean = dict(payload)
     citations = clean.get("citations", [])
     if isinstance(citations, list):
-        clean["citations"] = [redact_path_value(dict(item)) for item in citations if isinstance(item, dict)]
+        clean["citations"] = [
+            redact_path_value({**dict(item), "image_path": str(dict(item).get("image_path", "") or "")})
+            for item in citations
+            if isinstance(item, dict)
+        ]
+    generated_images = clean.get("generated_images", [])
+    if isinstance(generated_images, list):
+        clean["generated_images"] = [
+            redact_path_value({**dict(item), "image_path": str(dict(item).get("image_path", "") or "")})
+            for item in generated_images
+            if isinstance(item, dict)
+        ]
     return clean
 
 
@@ -57,6 +70,10 @@ def build_citations_from_docs(documents: List[Any], max_citations: int) -> List[
                 "chunk_len": int(meta.get("chunk_len", len(str(getattr(doc, "page_content", "")))) or 0),
                 "section_label": str(meta.get("section_label", meta.get("source_type", "")) or ""),
                 "similarity": float(meta.get("similarity", 0.0) or 0.0),
+                "modality": str(meta.get("modality", "text") or "text"),
+                "image_path": str(meta.get("image_path", "") or ""),
+                "image_caption": str(meta.get("image_caption", "") or ""),
+                "page_num": int(meta.get("page_num", 0) or 0),
                 "snippet": compact_sentence(str(getattr(doc, "page_content", ""))),
             }
         )
