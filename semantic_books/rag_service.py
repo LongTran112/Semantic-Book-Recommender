@@ -387,6 +387,27 @@ class RagService:
         return any(marker in q for marker in definition_markers)
 
     @staticmethod
+    def _is_factoid_query(query: str) -> bool:
+        q = str(query or "").strip().lower()
+        if not q:
+            return False
+        markers = [
+            "what is ",
+            "what are ",
+            "where is ",
+            "where are ",
+            "who is ",
+            "who are ",
+            "when is ",
+            "when was ",
+            "definition of ",
+            "meaning of ",
+            "capital of ",
+            "located ",
+        ]
+        return any(marker in q for marker in markers)
+
+    @staticmethod
     def _extract_query_topic(query: str) -> str:
         text = re.sub(r"\s+", " ", str(query or "").strip())
         if not text:
@@ -399,6 +420,11 @@ class RagService:
             "definition of ",
             "explain ",
             "explain for me ",
+            "where is ",
+            "where are ",
+            "who is ",
+            "who are ",
+            "what are ",
         ]
         for prefix in prefixes:
             if lowered.startswith(prefix):
@@ -406,6 +432,32 @@ class RagService:
                 break
         text = text.strip(" ?!.:,;\"'")
         return text
+
+    @staticmethod
+    def _topic_present_in_chunks(topic: str, chunks: List[Dict[str, Any]]) -> bool:
+        clean_topic = str(topic or "").strip().lower()
+        if not clean_topic:
+            return False
+        topic_tokens = [tok for tok in re.findall(r"[a-z0-9]+", clean_topic) if len(tok) >= 3]
+        if not topic_tokens:
+            return False
+        for item in chunks[: min(6, len(chunks))]:
+            text_blob = " ".join(
+                [
+                    str(item.get("title", "") or ""),
+                    str(item.get("section_label", "") or ""),
+                    str(item.get("chunk_text", "") or ""),
+                    str(item.get("image_caption", "") or ""),
+                ]
+            ).lower()
+            if not text_blob:
+                continue
+            if clean_topic in text_blob:
+                return True
+            token_hits = sum(1 for token in topic_tokens if token in text_blob)
+            if token_hits >= max(1, min(2, len(topic_tokens))):
+                return True
+        return False
 
     @staticmethod
     def _build_follow_ups(
@@ -667,7 +719,30 @@ class RagService:
         prompt_chars = 0
         raw_generated_attempt = ""
         low_grounding_threshold = 0.28
-        if allow_fallback and top_relevance < low_grounding_threshold:
+        factoid_query = self._is_factoid_query(query)
+        topic = self._extract_query_topic(query)
+        topic_present_in_chunks = self._topic_present_in_chunks(topic=topic, chunks=chunks)
+        factoid_similarity_threshold = 0.35
+        factoid_weak_grounding = bool(
+            factoid_query
+            and (
+                (topic and not topic_present_in_chunks)
+                or top_similarity < factoid_similarity_threshold
+            )
+        )
+        if factoid_weak_grounding:
+            snippet_lines = []
+            for idx, item in enumerate(citations[:2], start=1):
+                snippet_lines.append(f"- {item.get('snippet', '')} [{item.get('citation_id', f'C{idx}')}]")
+            generated_answer = (
+                "Answer: I could not find enough grounded evidence for that factoid query in your indexed books.\n"
+                + "\n".join(snippet_lines)
+            )
+            fallback_reason = (
+                "Factoid query had weak grounding (missing topic or low semantic similarity); "
+                "returned grounded snippets."
+            )
+        elif allow_fallback and top_relevance < low_grounding_threshold:
             snippet_lines = []
             for idx, item in enumerate(citations[:2], start=1):
                 snippet_lines.append(f"- {item.get('snippet', '')} [{item.get('citation_id', f'C{idx}')}]")
@@ -716,10 +791,19 @@ class RagService:
                     generation_mode = str(result.backend or "deterministic")
 
         if not generated_answer:
-            if not allow_fallback and raw_generated_attempt:
-                generated_answer = raw_generated_attempt
+            if not allow_fallback:
                 generation_mode = str("ollama" if ollama_cfg.enabled else "llama.cpp" if generation_cfg.enabled else "deterministic")
-                fallback_reason = ""
+                if raw_generated_attempt:
+                    # Advanced debug path: return raw model output even when it fails citation validation.
+                    generated_answer = raw_generated_attempt
+                    fallback_reason = ""
+                else:
+                    generated_answer = (
+                        "Answer: Deterministic fallback is disabled and no valid generated answer was produced.\n"
+                        "Enable deterministic fallback or configure a working generation backend."
+                    )
+                    if not fallback_reason:
+                        fallback_reason = "Deterministic fallback disabled; no valid generated answer."
             else:
                 generated_answer = self._deterministic_answer(chunks, citations)
         generated_images: List[Dict[str, Any]] = []

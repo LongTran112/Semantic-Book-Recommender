@@ -1,0 +1,12 @@
+{
+  "schema_version": "v2",
+  "model_name": "thenlper/gte-large",
+  "text_model_name": "thenlper/gte-large",
+  "image_model_name": "",
+  "num_items": 18744,
+  "num_image_items": 0,
+  "has_image_vectors": false,
+  "modalities": [
+    "text"
+  ]
+}

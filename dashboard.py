@@ -1917,7 +1917,7 @@ def render_ask_books_rag_page(
         )
         disable_fallback = st.toggle(
             "Disable deterministic fallback (advanced)",
-            value=True,
+            value=False,
             key="rag-disable-fallback",
             help=(
                 "If enabled, app will keep raw model output even when citation markers are invalid. "

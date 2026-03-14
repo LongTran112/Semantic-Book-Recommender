@@ -68,7 +68,7 @@ pip install -r requirements.txt
   --model "sentence-transformers/all-MiniLM-L6-v2"
 ```
 
-#### Compare two text embedding models (optional)
+#### Compare multiple text embedding models (optional)
 
 ```bash
 # MiniLM (faster, lighter)
@@ -82,6 +82,24 @@ pip install -r requirements.txt
   --semantic-source "./output/semantic_chunks.jsonl" \
   --output-dir "./output/semantic_index_chunks_bge_base" \
   --model "BAAI/bge-base-en-v1.5"
+
+# BGE large (higher quality, slower/heavier)
+.venv/bin/python build_semantic_index.py \
+  --semantic-source "./output/semantic_chunks.jsonl" \
+  --output-dir "./output/semantic_index_chunks_bge_large" \
+  --model "BAAI/bge-large-en-v1.5"
+
+# MXBAI large (strong retrieval quality)
+.venv/bin/python build_semantic_index.py \
+  --semantic-source "./output/semantic_chunks.jsonl" \
+  --output-dir "./output/semantic_index_chunks_mxbai_large" \
+  --model "mixedbread-ai/mxbai-embed-large-v1"
+
+# GTE large (quality-focused alternative)
+.venv/bin/python build_semantic_index.py \
+  --semantic-source "./output/semantic_chunks.jsonl" \
+  --output-dir "./output/semantic_index_chunks_gte_large" \
+  --model "thenlper/gte-large"
 ```
 
 ### 5) Start API (optional but recommended for API mode)
