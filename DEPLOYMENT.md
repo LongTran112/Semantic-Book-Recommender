@@ -7,6 +7,9 @@ This guide deploys EBooksSorter with four containers:
 - `ollama` (local model runtime)
 - `nginx` (TLS reverse proxy)
 
+Note: synthetic image generation is supported via an external SDAPI-compatible service.
+This Compose stack does not include a Stable Diffusion server by default.
+
 ## 1) VM Sizing and Storage
 
 Recommended baseline for `granite3.3:8b` on CPU-only Ollama:
@@ -90,6 +93,9 @@ This script runs:
 1. `index_books.py`
 2. semantic index build (`output/semantic_index`)
 3. chunk index build (`output/semantic_index_chunks`)
+
+Current behavior: chunk/book index builds do not scan source PDF/EPUB pages into
+`output/semantic_images`; they index text/chunk records provided by semantic source JSONL.
 
 ## 6) Start Production Stack
 
