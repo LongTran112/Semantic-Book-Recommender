@@ -382,10 +382,6 @@ class ChunkRecord:
     chunk_len: int
     section_label: str
     chunk_text: str
-    modality: str = "text"
-    image_path: str = ""
-    image_caption: str = ""
-    page_num: int = 0
 
 
 @dataclass(frozen=True)
@@ -1038,10 +1034,6 @@ def build_semantic_chunks(
                         chunk_len=chunk_len,
                         section_label=source_type,
                         chunk_text=chunk_text,
-                        modality="text",
-                        image_path="",
-                        image_caption="",
-                        page_num=0,
                     )
                 )
                 chunk_order += 1
@@ -1069,10 +1061,6 @@ def write_semantic_chunks_jsonl(chunks: Sequence[ChunkRecord], output_path: Path
                 "chunk_len": chunk.chunk_len,
                 "section_label": chunk.section_label,
                 "chunk_text": chunk.chunk_text,
-                "modality": chunk.modality,
-                "image_path": chunk.image_path,
-                "image_caption": chunk.image_caption,
-                "page_num": chunk.page_num,
             }
             safe_payload = sanitize_json_value(payload)
             handle.write(json.dumps(safe_payload, ensure_ascii=False) + "\n")

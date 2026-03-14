@@ -1,13 +1,4 @@
 {
-  "schema_version": "v2",
   "model_name": "sentence-transformers/all-MiniLM-L6-v2",
-  "text_model_name": "sentence-transformers/all-MiniLM-L6-v2",
-  "image_model_name": "sentence-transformers/clip-ViT-B-32",
-  "num_items": 20680,
-  "num_image_items": 2105,
-  "has_image_vectors": true,
-  "modalities": [
-    "image",
-    "text"
-  ]
+  "num_items": 20680
 }

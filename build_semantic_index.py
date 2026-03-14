@@ -56,17 +56,6 @@ def load_records(path: Path) -> List[Dict[str, Any]]:
 
 
 def build_embedding_text(record: Dict[str, Any]) -> str:
-    modality = str(record.get("modality", "text") or "text")
-    if modality == "image":
-        parts = [
-            str(record.get("title", "") or ""),
-            str(record.get("category", "") or ""),
-            str(record.get("learning_mode", "") or ""),
-            str(record.get("section_label", "") or ""),
-            str(record.get("image_caption", "") or ""),
-            str(record.get("chunk_text", "") or ""),
-        ]
-        return "\n".join(part for part in parts if part.strip())
     if "chunk_text" in record:
         parts = [
             str(record.get("title", "") or ""),

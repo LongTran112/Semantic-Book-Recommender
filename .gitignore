@@ -9,5 +9,3 @@ deploy/nginx/htpasswd
 output/.~lock.*
 output/covers/
 current-read-books/
-output/generated_images/
-output/semantic_images/

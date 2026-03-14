@@ -1,12 +1,4 @@
 {
-  "schema_version": "v2",
   "model_name": "sentence-transformers/all-MiniLM-L6-v2",
-  "text_model_name": "sentence-transformers/all-MiniLM-L6-v2",
-  "image_model_name": "",
-  "num_items": 18744,
-  "num_image_items": 0,
-  "has_image_vectors": false,
-  "modalities": [
-    "text"
-  ]
+  "num_items": 18744
 }

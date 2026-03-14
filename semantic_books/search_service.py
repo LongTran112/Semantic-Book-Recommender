@@ -64,10 +64,6 @@ class SemanticSearchService:
 
     def _filter_indices(self, filters: SearchFilters) -> np.ndarray:
         idxs = np.arange(len(self.metadata))
-        idxs = np.array(
-            [idx for idx in idxs if str(self.metadata[idx].get("modality", "text")) == "text"],
-            dtype=int,
-        )
         if filters.categories:
             categories = set(filters.categories)
             idxs = np.array([idx for idx in idxs if self.metadata[idx].get("category") in categories], dtype=int)
